@@ -1,0 +1,17 @@
+{
+  "name": "casa-pia-live-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "export:zerozero": "node scripts/export-zerozero.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
