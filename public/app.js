@@ -1,4 +1,4 @@
-﻿const state = {
+const state = {
   db: null,
   level: "Sub13",
   dataLevel: "Sub13",
@@ -15,6 +15,7 @@
   selectedPlayerId: null,
   playerSearch: "",
   resultsSeason: "all",
+  reportSetupVisible: true,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -58,13 +59,43 @@ function allPlayers() {
   return [...state.db.players].sort((a, b) => a.name.localeCompare(b.name, "pt", { sensitivity: "base" }));
 }
 
+function playerNameKey(name) {
+  return String(name || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function uniquePlayers(players = allPlayers()) {
+  const byName = new Map();
+  players.forEach((player) => {
+    const key = playerNameKey(player.name);
+    if (!key) return;
+    const existing = byName.get(key);
+    if (!existing) {
+      byName.set(key, {
+        ...player,
+        levels: player.level ? [player.level] : [],
+      });
+      return;
+    }
+    if (!existing.photoUrl && player.photoUrl) existing.photoUrl = player.photoUrl;
+    if (!existing.level && player.level) existing.level = player.level;
+    if (player.level && !existing.levels.includes(player.level)) existing.levels.push(player.level);
+  });
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, "pt", { sensitivity: "base" }));
+}
+
 function pickerPlayers() {
   const term = state.playerSearch.trim().toLowerCase();
-  if (!term) return allPlayers();
-  return allPlayers().filter((player) => {
+  const players = uniquePlayers();
+  if (!term) return players;
+  return players.filter((player) => {
     const name = player.name.toLowerCase();
-    const level = (player.level || "").toLowerCase();
-    return name.includes(term) || level.includes(term);
+    const levels = (player.levels || [player.level || ""]).join(" ").toLowerCase();
+    return name.includes(term) || levels.includes(term);
   });
 }
 
@@ -157,7 +188,7 @@ function reportRosterNames() {
 
 function eventPlayers() {
   const names = new Set(reportRosterNames());
-  return allPlayers().filter((player) => names.has(player.name));
+  return uniquePlayers().filter((player) => names.has(player.name));
 }
 
 function setView(view) {
@@ -197,6 +228,87 @@ function renderAuth() {
   $("#delegateContent").hidden = !canDelegate();
   const syncPanel = $("#excelSyncPanel");
   if (syncPanel) syncPanel.hidden = !isAdmin();
+}
+
+function renderDelegateMode() {
+  const setup = $("#delegateSetup");
+  const toggle = $("#toggleReportView");
+  if (!setup || !toggle) return;
+  const hasReport = Boolean(state.selectedMatch && state.db.matchReports[state.selectedMatch.id]);
+  setup.hidden = hasReport && !state.reportSetupVisible;
+  toggle.hidden = !hasReport;
+  toggle.textContent = state.reportSetupVisible ? "Ocultar ficha de jogo" : "Ver ficha de jogo";
+  updateMatchControlButtons();
+}
+
+function selectedMatchEvents() {
+  if (!state.selectedMatch) return [];
+  return state.db.events.filter((event) => event.matchId === state.selectedMatch.id);
+}
+
+function hasSystemEvent(type) {
+  return selectedMatchEvents().some((event) => event.team === "Sistema" && event.type === type);
+}
+
+function selectedMatchLive() {
+  const matchId = state.selectedMatch?.id;
+  if (!matchId) return null;
+  return state.db.liveGames?.[matchId] || (state.db.live?.matchId === matchId ? state.db.live : null);
+}
+
+function canUseMatchControl(control) {
+  if (!state.selectedMatch) return { ok: false, reason: "Guarda primeiro a ficha/cria o jogo." };
+  const live = selectedMatchLive();
+  const period = live?.period || "Pre-jogo";
+  if (live?.liveEnded || hasSystemEvent("Fim de jogo")) {
+    return { ok: false, reason: "O jogo já terminou." };
+  }
+  if (control === "start-first") {
+    return hasSystemEvent("Início do jogo")
+      ? { ok: false, reason: "O jogo já foi iniciado." }
+      : { ok: true };
+  }
+  if (control === "half-time") {
+    return hasSystemEvent("Início do jogo") && period === "1ª Parte"
+      ? { ok: true }
+      : { ok: false, reason: "Só podes terminar a 1ª parte depois de clicar em Início do jogo." };
+  }
+  if (control === "start-second") {
+    return hasSystemEvent("Fim da 1ª parte") && period === "Intervalo"
+      ? { ok: true }
+      : { ok: false, reason: "Só podes iniciar a 2ª parte depois de clicar em Fim da 1ª parte." };
+  }
+  if (control === "full-time") {
+    return hasSystemEvent("Início da 2ª parte") && period === "2ª Parte"
+      ? { ok: true }
+      : { ok: false, reason: "Só podes terminar o jogo depois de clicar em Início da 2ª parte." };
+  }
+  return { ok: false, reason: "Controlo inválido." };
+}
+
+function canRegisterMatchEvent() {
+  if (!state.selectedMatch) return { ok: false, reason: "Guarda primeiro a ficha/cria o jogo." };
+  if (!hasSystemEvent("Início do jogo")) {
+    return { ok: false, reason: "Só podes registar eventos depois de clicar em Início do jogo." };
+  }
+  if (hasSystemEvent("Fim de jogo") || selectedMatchLive()?.liveEnded) {
+    return { ok: false, reason: "O jogo já terminou." };
+  }
+  return { ok: true };
+}
+
+function updateMatchControlButtons() {
+  $$("[data-control]").forEach((button) => {
+    const stateForButton = canUseMatchControl(button.dataset.control);
+    button.disabled = !stateForButton.ok;
+    button.title = stateForButton.ok ? "" : stateForButton.reason;
+  });
+  const addEventButton = $("#addEvent");
+  if (addEventButton) {
+    const eventState = canRegisterMatchEvent();
+    addEventButton.disabled = !eventState.ok;
+    addEventButton.title = eventState.ok ? "" : eventState.reason;
+  }
 }
 
 function currentSeasonLabel() {
@@ -240,7 +352,6 @@ function renderSelectors() {
   if ($("#manualSeason") && !$("#manualSeason").value) $("#manualSeason").value = state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason;
 
   $("#manualOpponentWrap").hidden = false;
-  $("#createDelegateMatch").hidden = false;
 }
 
 function renderMatchCard() {
@@ -311,6 +422,15 @@ function initials(name) {
     .map((part) => part[0] || "")
     .join("")
     .toUpperCase();
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function playerPhoto(name) {
@@ -456,8 +576,11 @@ function renderPlayers() {
 
     const button = document.createElement("button");
     button.className = `player-card ${selectedStarter ? "is-starter" : ""} ${selectedBench ? "is-bench" : ""}`;
-    const status = selectedStarter ? "Titular" : selectedBench ? "Suplente" : "Disponivel";
-    button.innerHTML = `<strong>${player.name}</strong><span>${status} - ${player.level || "Escalao por definir"}</span>`;
+    const status = selectedStarter ? "Titular" : selectedBench ? "Suplente" : "Disponível";
+    const levels = (player.levels?.length ? player.levels : [player.level || "Escalão por definir"])
+      .map((level) => `<em>${escapeHtml(level)}</em>`)
+      .join("");
+    button.innerHTML = `<strong>${escapeHtml(player.name)}</strong><span>${status}</span><small class="player-levels">${levels}</small>`;
     button.addEventListener("click", () => togglePlayer(player.name));
     grid.append(button);
     visibleCount += 1;
@@ -840,6 +963,7 @@ function renderAll() {
   renderTimeline();
   renderDataPage();
   renderTeamsPage();
+  renderDelegateMode();
 }
 
 async function activateSelectedMatch() {
@@ -891,6 +1015,7 @@ async function refreshLive() {
   renderDataPage();
   renderTeamsPage();
   renderLiveHub();
+  updateMatchControlButtons();
 }
 
 function applyFreshDb(fresh) {
@@ -918,6 +1043,12 @@ async function addSystemEvent(type, period) {
 }
 
 async function setMatchControl(control) {
+  const allowed = canUseMatchControl(control);
+  if (!allowed.ok) {
+    alert(allowed.reason);
+    updateMatchControlButtons();
+    return;
+  }
   const config = {
     "start-first": { period: "1ª Parte", status: "Em direto", liveEnded: false, event: "Início do jogo" },
     "half-time": { period: "Intervalo", status: "Intervalo", liveEnded: false, event: "Fim da 1ª parte" },
@@ -1052,11 +1183,12 @@ $("#teamsSeasonSelect")?.addEventListener("change", () => {
   renderTeamsPage();
 });
 
-$("#createDelegateMatch")?.addEventListener("click", async () => {
+async function ensureDelegateMatch() {
+  if (state.selectedMatch) return state.selectedMatch;
   const opponent = $("#delegateManualOpponent").value.trim();
   if (!opponent) {
     alert("Escreve a equipa adversária.");
-    return;
+    return null;
   }
   const fresh = await request("/api/manual-match", {
     method: "POST",
@@ -1068,13 +1200,12 @@ $("#createDelegateMatch")?.addEventListener("click", async () => {
       venue: "Casa",
     }),
   });
-  applyFreshDb(fresh);
+  state.db = fresh;
   state.selectedMatch = fresh.manualMatch;
-  $("#delegateManualOpponent").value = "";
-  resetLineup();
+  state.reportSetupVisible = true;
   await activateSelectedMatch();
-  renderAll();
-});
+  return state.selectedMatch;
+}
 
 $("#tacticInput").addEventListener("input", () => {
   syncSlotsFromStarters();
@@ -1084,13 +1215,13 @@ $("#eventType").addEventListener("change", updateEventFormMode);
 $("#eventTeam").addEventListener("change", updateEventFormMode);
 
 $("#saveReport").addEventListener("click", async () => {
-  if (!state.selectedMatch) {
-    alert("Escolhe uma partida ou cria uma partida manual com a equipa adversária.");
-    return;
-  }
   const team = activeTeam();
   if (state.starters.size !== team.format) {
     alert(`Este escalão precisa de ${team.format} titulares.`);
+    return;
+  }
+  const match = await ensureDelegateMatch();
+  if (!match) {
     return;
   }
   await request("/api/report", {
@@ -1107,7 +1238,8 @@ $("#saveReport").addEventListener("click", async () => {
   });
   await refreshLive();
   renderEventPlayers();
-  alert("Ficha guardada.");
+  state.reportSetupVisible = false;
+  renderDelegateMode();
 });
 
 $("#clearReport").addEventListener("click", async () => {
@@ -1125,10 +1257,22 @@ $("#clearReport").addEventListener("click", async () => {
     }),
   });
   await refreshLive();
+  state.reportSetupVisible = true;
   renderAll();
 });
 
+$("#toggleReportView")?.addEventListener("click", () => {
+  state.reportSetupVisible = !state.reportSetupVisible;
+  renderDelegateMode();
+});
+
 $("#addEvent").addEventListener("click", async () => {
+  const eventState = canRegisterMatchEvent();
+  if (!eventState.ok) {
+    alert(eventState.reason);
+    updateMatchControlButtons();
+    return;
+  }
   const type = $("#eventType").value;
   const team = $("#eventTeam").value;
   const player = eventPlayers().find((item) => item.id === $("#eventPlayer").value);
