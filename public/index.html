@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt">
   <head>
     <meta charset="utf-8" />
@@ -55,7 +55,7 @@
         </section>
 
         <div id="delegateContent">
-          <div class="layout">
+          <div id="delegateSetup" class="layout">
             <aside class="panel compact">
               <h2>Jogo</h2>
               <label>Escalão
@@ -64,7 +64,6 @@
               <label id="manualOpponentWrap">Equipa adversária
                 <input id="delegateManualOpponent" placeholder="Escrever adversário" />
               </label>
-              <button id="createDelegateMatch" class="ghost">Criar partida</button>
               <div class="match-card" id="matchCard"></div>
               <label>Delegado
                 <input id="delegateName" placeholder="Nome do delegado" />
@@ -75,10 +74,6 @@
               <label>Notas
                 <textarea id="notesInput" rows="4" placeholder="Observações internas"></textarea>
               </label>
-              <div class="delegate-actions">
-                <button id="saveReport" class="primary">Guardar ficha</button>
-                <button id="clearReport" class="ghost">Limpar ficha</button>
-              </div>
             </aside>
 
             <section class="panel">
@@ -105,6 +100,11 @@
                 </aside>
               </div>
             </section>
+
+            <div class="panel delegate-actions">
+              <button id="saveReport" class="primary">Guardar ficha / criar jogo</button>
+              <button id="clearReport" class="ghost">Limpar ficha</button>
+            </div>
           </div>
 
           <section class="panel event-panel">
@@ -113,7 +113,10 @@
                 <h2>Controlo e eventos</h2>
                 <p>Os botões de jogo controlam a live; os eventos alimentam a cronologia e o histórico.</p>
               </div>
-              <div class="score-mini" id="scoreMini">0 - 0</div>
+              <div class="event-head-actions">
+                <button id="toggleReportView" class="ghost" hidden>Ver ficha de jogo</button>
+                <div class="score-mini" id="scoreMini">0 - 0</div>
+              </div>
             </div>
 
             <div class="match-controls">
