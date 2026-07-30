@@ -288,11 +288,15 @@ function canUseMatchControl(control) {
 
 function canRegisterMatchEvent() {
   if (!state.selectedMatch) return { ok: false, reason: "Guarda primeiro a ficha/cria o jogo." };
+  const live = selectedMatchLive();
   if (!hasSystemEvent("Início do jogo")) {
     return { ok: false, reason: "Só podes registar eventos depois de clicar em Início do jogo." };
   }
-  if (hasSystemEvent("Fim de jogo") || selectedMatchLive()?.liveEnded) {
+  if (hasSystemEvent("Fim de jogo") || live?.liveEnded) {
     return { ok: false, reason: "O jogo já terminou." };
+  }
+  if (!["1ª Parte", "2ª Parte"].includes(live?.period || "")) {
+    return { ok: false, reason: "Só podes registar eventos durante a 1ª ou a 2ª parte." };
   }
   return { ok: true };
 }
@@ -496,6 +500,35 @@ function resetLineup() {
   state.bench.clear();
   state.lineupSlots = Array(activeTeam().format).fill("");
   state.selectedSlot = null;
+}
+
+function restoreReportState(matchId = state.selectedMatch?.id) {
+  const match = matchById(matchId);
+  if (!match) return false;
+  state.selectedMatch = match;
+  state.level = match.level || state.level;
+  const team = activeTeam();
+  const report = state.db.matchReports?.[match.id] || {};
+  const starters = report.lineupSlots?.length ? report.lineupSlots : report.starters || [];
+  state.lineupSlots = Array.from({ length: team.format }, (_, index) => starters[index] || "");
+  state.starters = new Set(state.lineupSlots.filter(Boolean));
+  state.bench = new Set(report.bench || []);
+  state.selectedSlot = null;
+  return true;
+}
+
+function restoreActiveDelegateMatch() {
+  const liveIds = [
+    state.db.live?.matchId,
+    ...Object.keys(state.db.liveGames || {}),
+  ].filter(Boolean);
+  const reportIds = Object.keys(state.db.matchReports || {});
+  const candidates = [...liveIds, ...reportIds];
+  const activeId = candidates.find((matchId) => state.db.matchReports?.[matchId] && matchById(matchId));
+  if (activeId) return restoreReportState(activeId);
+  resetLineup();
+  state.selectedMatch = null;
+  return false;
 }
 
 function setPickerMode(mode) {
@@ -888,7 +921,7 @@ function liveGames() {
       };
       return { match, live: liveMap[matchId] || fallback, hasReport: Boolean(report) };
     })
-    .filter((item) => item.match && (item.hasReport || item.live));
+    .filter((item) => item.match && item.hasReport);
 }
 
 function renderLiveHub() {
@@ -995,8 +1028,7 @@ async function bootstrap() {
   state.level = state.db.teams[0]?.level || "Sub13";
   state.dataLevel = state.level;
   state.teamsLevel = state.level;
-  state.selectedMatch = null;
-  resetLineup();
+  restoreActiveDelegateMatch();
   renderAll();
   renderAuth();
   setView(viewFromHash());
@@ -1023,8 +1055,7 @@ function applyFreshDb(fresh) {
   state.level = state.db.teams.find((team) => team.level === state.level)?.level || state.db.teams[0]?.level || "Sub13";
   state.dataLevel = state.db.teams.find((team) => team.level === state.dataLevel)?.level || state.level;
   state.teamsLevel = state.db.teams.find((team) => team.level === state.teamsLevel)?.level || state.level;
-  state.selectedMatch = openMatches()[0] || null;
-  resetLineup();
+  restoreActiveDelegateMatch();
   renderAll();
   renderAuth();
   renderLiveHub();
@@ -1295,7 +1326,7 @@ $("#addEvent").addEventListener("click", async () => {
       matchId: state.selectedMatch.id,
       type,
       team,
-      period: state.db.live?.period || "Jogo",
+      period: selectedMatchLive()?.period || "Jogo",
       playerId: team === "Adversário" ? "" : player?.id || "",
       playerName: team === "Adversário" ? "" : player?.name || "",
       assistId: team === "Adversário" ? "" : assist?.id || "",
