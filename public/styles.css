@@ -699,8 +699,16 @@ textarea {
 }
 
 .delegate-actions {
+  grid-column: 1;
   display: grid;
   gap: 8px;
+  padding: 12px;
+  box-shadow: none;
+}
+
+.delegate-actions button {
+  width: 100%;
+  min-height: 46px;
 }
 
 .ghost {
