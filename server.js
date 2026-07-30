@@ -1,4 +1,4 @@
-﻿import http from "node:http";
+import http from "node:http";
 import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -191,7 +191,6 @@ async function importWorkbookLegacy() {
     }
   }
 
-  const liveMatch = matches.find((m) => m.status === "scheduled") || matches[0];
   return {
     meta: {
       club: "Casa Pia AC",
@@ -208,19 +207,7 @@ async function importWorkbookLegacy() {
     players,
     matches,
     matchReports: {},
-    live: liveMatch
-      ? {
-          matchId: liveMatch.id,
-          period: "Pre-jogo",
-          homeScore: liveMatch.goalsFor ?? 0,
-          awayScore: liveMatch.goalsAgainst ?? 0,
-          status: liveMatch.status === "finished" ? "Terminado" : "Por iniciar",
-          liveEnded: liveMatch.status === "finished",
-          cornersFor: 0,
-          cornersAgainst: 0,
-          updatedAt: new Date().toISOString(),
-        }
-      : null,
+    live: null,
     events: [],
   };
 }
@@ -297,7 +284,6 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
     }
   }
 
-  const liveMatch = matches.find((m) => m.status === "scheduled") || matches[0];
   return {
     meta: {
       club: "Casa Pia AC",
@@ -314,19 +300,7 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
     players,
     matches,
     matchReports: {},
-    live: liveMatch
-      ? {
-          matchId: liveMatch.id,
-          period: "Pre-jogo",
-          homeScore: liveMatch.goalsFor ?? 0,
-          awayScore: liveMatch.goalsAgainst ?? 0,
-          status: liveMatch.status === "finished" ? "Terminado" : "Por iniciar",
-          liveEnded: liveMatch.status === "finished",
-          cornersFor: 0,
-          cornersAgainst: 0,
-          updatedAt: new Date().toISOString(),
-        }
-      : null,
+    live: null,
     events: [],
   };
 }
@@ -339,7 +313,7 @@ function preserveAppData(imported, current) {
     liveGames: current.liveGames || {},
     hiddenLiveGames: current.hiddenLiveGames || [],
     zerozero: current.zerozero || imported.zerozero || {},
-    live: current.live || imported.live,
+    live: current.live || null,
   };
 }
 
@@ -678,10 +652,18 @@ async function api(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/events") {
     const body = await readBody(req);
+    const matchId = body.matchId || db.live?.matchId;
+    const matchLive = db.liveGames?.[matchId] || (db.live?.matchId === matchId ? db.live : null);
+    if (body.team !== "Sistema") {
+      if (!matchLive || !["1ª Parte", "2ª Parte"].includes(matchLive.period || "") || matchLive.liveEnded) {
+        send(res, 400, { error: "Só é possível registar eventos durante a 1ª ou a 2ª parte." });
+        return;
+      }
+    }
     const event = {
       id: `evt_${Date.now()}`,
-      matchId: body.matchId || db.live?.matchId,
-      period: body.period || db.live?.period || "Jogo",
+      matchId,
+      period: body.period || matchLive?.period || db.live?.period || "Jogo",
       type: body.type,
       team: body.team || "Casa Pia",
       playerId: body.playerId || "",
