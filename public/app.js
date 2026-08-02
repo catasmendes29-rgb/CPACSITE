@@ -21,6 +21,10 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+document.addEventListener("error", (event) => {
+  const image = event.target;
+  if (image instanceof HTMLImageElement && image.matches("[data-player-photo]")) image.remove();
+}, true);
 const viewTitles = { data: "Resultados", teams: "Equipas", delegate: "Delegado", live: "Live" };
 const viewHashes = { resultados: "data", equipas: "teams", delegado: "delegate", live: "live" };
 const delegateTeams = [
@@ -467,7 +471,7 @@ function pitchMarkup(names, tactic, total, options = {}) {
           const name = names[index] || "";
           if (!name) return `<span class="player-dot empty" style="left:${slot.x}%;top:${slot.y}%">+</span>`;
           if (withPhotos) {
-            return `<span class="player-dot photo-dot" style="left:${slot.x}%;top:${slot.y}%"><img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" /><small>${name}</small></span>`;
+            return `<span class="player-dot photo-dot" data-initials="${initials(name)}" style="left:${slot.x}%;top:${slot.y}%"><img data-player-photo src="${playerPhotoSrc(name, level)}" alt="" /><small>${name}</small></span>`;
           }
           return `<span class="player-dot" style="left:${slot.x}%;top:${slot.y}%">${name}</span>`;
         })
@@ -479,8 +483,8 @@ function pitchMarkup(names, tactic, total, options = {}) {
 function livePlayerCard(name, index, level) {
   return `
     <article class="live-player-card">
-      <div class="player-photo">
-        <img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" />
+      <div class="player-photo" data-initials="${initials(name)}">
+        <img data-player-photo src="${playerPhotoSrc(name, level)}" alt="" />
       </div>
       <strong>${index + 1}. ${name}</strong>
     </article>
@@ -969,9 +973,12 @@ function renderLiveDetailSheets() {
   const match = matchById(matchId);
   const total = state.db.teams.find((team) => team.level === match?.level)?.format || (report.starters || []).length || 11;
   const starters = report.starters || [];
+  const fallbackTactic = total === 7 ? "1-3-2-1" : total === 9 ? "1-3-3-2" : "1-4-3-3";
+  const tacticParts = String(report.tactic || "").split("-").map(Number).filter((part) => Number.isFinite(part) && part > 0);
+  const effectiveTactic = tacticParts.reduce((sum, part) => sum + part, 0) === total ? report.tactic : fallbackTactic;
   lineup.innerHTML = `
-    <h3>Tática ${report.tactic || "-"}</h3>
-    ${pitchMarkup(starters, report.tactic, total, { withPhotos: true, level: match?.level })}
+    <h3>Tática ${effectiveTactic}</h3>
+    ${pitchMarkup(starters, effectiveTactic, total, { withPhotos: true, level: match?.level })}
     <p><strong>Suplentes</strong></p>
     <div class="chip-list">${(report.bench || []).map((name) => `<span>${name}</span>`).join("") || "<span>Sem banco guardado</span>"}</div>
   `;
