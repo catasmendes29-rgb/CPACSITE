@@ -8,7 +8,7 @@ const state = {
   lineupSlots: [],
   selectedSlot: null,
   pickerMode: "starter",
-  user: JSON.parse(localStorage.getItem("cpacUser") || "null"),
+  user: null,
   liveDetailMatchId: null,
   competitionFilter: "all",
   teamsLevel: "Sub13",
@@ -16,6 +16,7 @@ const state = {
   playerSearch: "",
   resultsSeason: "all",
   reportSetupVisible: true,
+  sourceMatchId: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -192,6 +193,7 @@ function eventPlayers() {
 }
 
 function setView(view) {
+  if (view === "delegate" && !state.user && $(".delegate-tab").hidden) view = "data";
   if (view === "delegate" && !canDelegate()) {
     $(".delegate-tab").hidden = false;
   }
@@ -326,11 +328,12 @@ function selectedSyncSeason() {
   return state.resultsSeason && state.resultsSeason !== "all" ? state.resultsSeason : currentSeasonLabel();
 }
 
-function login(id, pass) {
-  const normalized = id.trim().toLowerCase();
-  if (normalized === "delegado" && pass === "0000") return { id: "Delegado", name: "Delegado", role: "delegate" };
-  if (normalized === "catarina" && pass === "kikomiau") return { id: "Catarina", name: "Catarina", role: "admin" };
-  return null;
+async function login(id, pass) {
+  const result = await request("/api/login", {
+    method: "POST",
+    body: JSON.stringify({ id, password: pass }),
+  });
+  return result.user;
 }
 
 function renderSelectors() {
@@ -774,8 +777,6 @@ function renderDataPage() {
   const summary = levelSummary(level);
   $("#dataCards").innerHTML = [
     ["Jogos", summary.matches, ""],
-    ["Realizados", summary.finished, ""],
-    ["Por jogar", summary.scheduled, ""],
     ["Vitórias", summary.wins, "result-win"],
     ["Empates", summary.draws, "result-draw"],
     ["Derrotas", summary.losses, "result-loss"],
@@ -797,13 +798,16 @@ function renderDataPage() {
       const rows = matches.map((match) => {
         const kind = resultKind(match);
         const result = kind === "pending" ? "Por jogar" : `<span class="score"><span class="goals-for">${match.goalsFor}</span>-<span class="goals-against">${match.goalsAgainst}</span></span>`;
-        return [
-          match.round || "-",
-          match.opponent,
-          match.venue || "-",
-          result,
-          `<span class="badge ${kind}">${resultLetter(kind)}</span>`,
-        ];
+        return {
+          cells: [
+            match.round || "-",
+            match.opponent,
+            match.venue || "-",
+            result,
+            `<span class="badge ${kind}">${resultLetter(kind)}</span>`,
+          ],
+          attrs: isAdmin() ? `class="source-match-row" data-source-match-id="${match.id}" tabindex="0"` : "",
+        };
       });
       return `<h3 class="competition-title">${competition}</h3>${table(["Jornada", "Adversário", "Local", "Resultado", "Estado"], rows)}`;
     })
@@ -975,7 +979,11 @@ function renderLiveDetailSheets() {
 
 function table(headers, rows) {
   const body = rows.length
-    ? rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`).join("")
+    ? rows.map((row) => {
+        const cells = Array.isArray(row) ? row : row.cells;
+        const attrs = Array.isArray(row) ? "" : row.attrs || "";
+        return `<tr ${attrs}>${cells.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`;
+      }).join("")
     : `<tr><td colspan="${headers.length}">Sem dados registados.</td></tr>`;
   return `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
 }
@@ -1024,7 +1032,9 @@ async function activateSelectedMatch() {
 }
 
 async function bootstrap() {
-  state.db = await request("/api/bootstrap");
+  const session = await request("/api/session");
+  state.user = session.user;
+  state.db = await request(state.user ? "/api/bootstrap" : "/api/public-bootstrap");
   state.level = state.db.teams[0]?.level || "Sub13";
   state.dataLevel = state.level;
   state.teamsLevel = state.level;
@@ -1035,7 +1045,7 @@ async function bootstrap() {
 }
 
 async function refreshLive() {
-  const fresh = await request("/api/bootstrap");
+  const fresh = await request(state.user ? "/api/bootstrap" : "/api/public-bootstrap");
   state.db.live = fresh.live;
   state.db.liveGames = fresh.liveGames;
   state.db.hiddenLiveGames = fresh.hiddenLiveGames;
@@ -1105,27 +1115,38 @@ $("#loginOpen").addEventListener("click", () => {
   setView("delegate");
 });
 
-$("#loginSubmit").addEventListener("click", () => {
-  const user = login($("#loginId").value, $("#loginPass").value);
-  if (!user) {
+$("#loginSubmit").addEventListener("click", async () => {
+  $("#loginError").textContent = "A validar...";
+  try {
+    state.user = await login($("#loginId").value, $("#loginPass").value);
+    $("#loginPass").value = "";
+    $("#loginError").textContent = "";
+    await bootstrap();
+    setView("delegate");
+  } catch {
+    state.user = null;
     $("#loginError").textContent = "Credenciais inválidas.";
-    return;
   }
-  state.user = user;
-  localStorage.setItem("cpacUser", JSON.stringify(user));
-  $("#loginError").textContent = "";
-  renderAuth();
+});
+
+$("#logoutBtn").addEventListener("click", async () => {
+  await request("/api/logout", { method: "POST" });
+  state.user = null;
+  await bootstrap();
   setView("delegate");
 });
 
-$("#logoutBtn").addEventListener("click", () => {
-  state.user = null;
-  localStorage.removeItem("cpacUser");
-  renderAuth();
-  setView("data");
-});
-
 document.addEventListener("click", async (event) => {
+  const sourceRow = event.target.closest(".source-match-row");
+  if (sourceRow && isAdmin()) {
+    const match = matchById(sourceRow.dataset.sourceMatchId);
+    const source = match?.source || (match?.sourceUrl ? "ZEROZERO" : "EXCEL");
+    state.sourceMatchId = match?.id || null;
+    $("#sourceDialogTitle").textContent = match ? `${match.level} vs ${match.opponent}` : "Fonte do jogo";
+    $("#sourceDialogContent").innerHTML = `<p><strong>Fonte:</strong> ${source}</p>${match?.sourceUrl ? `<p><a href="${match.sourceUrl}" target="_blank" rel="noreferrer">Abrir fonte original</a></p>` : ""}`;
+    $("#matchSourceDialog").showModal();
+    return;
+  }
   const teamPlayer = event.target.closest(".team-player-card");
   if (teamPlayer) {
     state.selectedPlayerId = teamPlayer.dataset.playerId;
@@ -1149,6 +1170,22 @@ document.addEventListener("click", async (event) => {
     }
     await refreshLive();
   }
+});
+
+$("#closeSourceDialog")?.addEventListener("click", () => {
+  $("#matchSourceDialog").close();
+  state.sourceMatchId = null;
+});
+
+$("#deleteResultMatch")?.addEventListener("click", async () => {
+  if (!isAdmin() || !state.sourceMatchId) return;
+  const match = matchById(state.sourceMatchId);
+  if (!confirm(`Eliminar o jogo contra ${match?.opponent || "o adversário"}? A ficha, os eventos e o Live associados também serão apagados.`)) return;
+  const fresh = await request(`/api/matches/${encodeURIComponent(state.sourceMatchId)}`, { method: "DELETE" });
+  $("#matchSourceDialog").close();
+  state.sourceMatchId = null;
+  applyFreshDb(fresh);
+  renderDataPage();
 });
 
 $("#backToLiveList").addEventListener("click", () => {
@@ -1221,7 +1258,7 @@ async function ensureDelegateMatch() {
     alert("Escreve a equipa adversária.");
     return null;
   }
-  const fresh = await request("/api/manual-match", {
+  const fresh = await request("/api/delegate-match", {
     method: "POST",
     body: JSON.stringify({
       level: state.level,
@@ -1233,6 +1270,9 @@ async function ensureDelegateMatch() {
   });
   state.db = fresh;
   state.selectedMatch = fresh.manualMatch;
+  state.dataLevel = fresh.manualMatch.level;
+  state.resultsSeason = fresh.manualMatch.season || "all";
+  state.competitionFilter = "all";
   state.reportSetupVisible = true;
   await activateSelectedMatch();
   return state.selectedMatch;
@@ -1275,19 +1315,16 @@ $("#saveReport").addEventListener("click", async () => {
 
 $("#clearReport").addEventListener("click", async () => {
   if (!state.selectedMatch) return;
-  if (!confirm("Limpar a ficha de jogo deste jogo? Os eventos registados ficam guardados.")) return;
+  if (!confirm("Eliminar este jogo? A ficha, os eventos e a respetiva publicação Live serão apagados.")) return;
+  const matchId = state.selectedMatch.id;
+  const fresh = await request(`/api/matches/${encodeURIComponent(matchId)}`, { method: "DELETE" });
+  state.selectedMatch = null;
+  state.liveDetailMatchId = null;
   resetLineup();
   $("#delegateName").value = "";
   $("#tacticInput").value = "";
   $("#notesInput").value = "";
-  await request("/api/report", {
-    method: "POST",
-    body: JSON.stringify({
-      matchId: state.selectedMatch.id,
-      clear: true,
-    }),
-  });
-  await refreshLive();
+  applyFreshDb(fresh);
   state.reportSetupVisible = true;
   renderAll();
 });
@@ -1471,4 +1508,6 @@ $("#saveManualMatch")?.addEventListener("click", async () => {
 });
 
 await bootstrap();
-setInterval(refreshLive, 3000);
+setInterval(() => {
+  if (state.db) refreshLive().catch(() => {});
+}, 3000);
