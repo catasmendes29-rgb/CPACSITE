@@ -1,4 +1,5 @@
-﻿# Casa Pia AC Live
+[README.md](https://github.com/user-attachments/files/30633375/README.md)
+# Casa Pia AC Live
 
 Aplicação web para resultados, ficha de jogo, live e registo de eventos dos escalões de formação.
 
@@ -16,10 +17,15 @@ http://localhost:4173
 
 ## Acesso
 
-- Delegado: ID `Delegado`, palavra-passe `0000`
-- Gestão: ID `Catarina`, palavra-passe `kikomiau`
+Existem apenas dois perfis: `admin` e `delegate`. Os identificadores e as palavras-passe são definidos pelas variáveis `CPAC_ADMIN_*` e `CPAC_DELEGATE_*` descritas em `.env.example`.
 
-Nota: este login é local no browser. Para uma publicação pública com dados sensíveis, o próximo passo recomendado é autenticação no backend.
+O login é validado no servidor. A sessão é guardada num cookie técnico `HttpOnly`, com duração máxima de oito horas. Nunca colocar palavras-passe em `public/app.js`, no README ou no repositório.
+
+Para desenvolvimento local, definir as variáveis no terminal antes de executar `npm start`. Em produção, configurá-las como segredos no Render.
+
+As operações relevantes ficam registadas em `DATA_DIR/audit.log`. O administrador pode consultar os últimos registos através de `GET /api/audit`.
+
+A informação específica sobre tratamento de dados está disponível em `/privacidade.html` e complementa a política geral do clube.
 
 ## Publicar no Render
 
@@ -32,6 +38,7 @@ Nota: este login é local no browser. Para uma publicação pública com dados s
    - web service Node
    - disco persistente em `/var/data`
 7. Depois do deploy, abrir o URL gerado pelo Render.
+8. Antes do primeiro arranque, definir `CPAC_ADMIN_PASSWORD` e `CPAC_DELEGATE_PASSWORD` em **Environment**. O serviço recusa arrancar em produção se algum destes segredos estiver vazio.
 
 ## Dados em produção
 
@@ -59,7 +66,7 @@ Ver `.env.example`.
 
 Em producao/publico:
 
-1. Entrar com `Catarina` / `kikomiau`.
+1. Entrar com a conta de administração configurada no servidor.
 2. Abrir `Resultados`.
 3. Usar `Importar Excel` e escolher o ficheiro `Casa pia.xlsx` atualizado.
 4. A app atualiza resultados, jogos e jogadoras, mantendo fichas de jogo, eventos, lives e jogos ocultados.
