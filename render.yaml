@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: casa-pia-live
     env: node
@@ -12,6 +12,18 @@
         value: /var/data
       - key: OUTPUT_DIR
         value: /var/data/outputs
+      - key: CPAC_ADMIN_ID
+        value: Catarina
+      - key: CPAC_ADMIN_NAME
+        value: Catarina Mendes
+      - key: CPAC_ADMIN_PASSWORD
+        sync: false
+      - key: CPAC_DELEGATE_ID
+        value: Delegado
+      - key: CPAC_DELEGATE_NAME
+        value: Delegado
+      - key: CPAC_DELEGATE_PASSWORD
+        sync: false
       - key: CASA_PIA_XLSX_URL
         sync: false
       - key: CASA_PIA_AUTO_SYNC_MINUTES
