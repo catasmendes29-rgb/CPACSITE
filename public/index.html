@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Casa Pia AC Live</title>
-    <link rel="stylesheet" href="/styles.css?v=20260607-allplayers1" />
+    <link rel="stylesheet" href="/styles.css?v=20260802-results4" />
   </head>
   <body>
     <header class="topbar">
@@ -35,7 +35,6 @@
           <h1 id="pageTitle">Resultados</h1>
           <p id="heroStatus">#VOAMOSJUNTOS</p>
         </div>
-        <img class="goose" src="/assets/goldganso.png" alt="Ganso Casa Pia" />
       </section>
 
       <section id="delegate" class="view">
@@ -74,6 +73,10 @@
               <label>Notas
                 <textarea id="notesInput" rows="4" placeholder="Observações internas"></textarea>
               </label>
+              <div class="delegate-actions">
+                <button id="saveReport" class="primary">Guardar ficha / criar jogo</button>
+                <button id="clearReport" class="ghost">Eliminar jogo</button>
+              </div>
             </aside>
 
             <section class="panel">
@@ -101,10 +104,6 @@
               </div>
             </section>
 
-            <div class="panel delegate-actions">
-              <button id="saveReport" class="primary">Guardar ficha / criar jogo</button>
-              <button id="clearReport" class="ghost">Limpar ficha</button>
-            </div>
           </div>
 
           <section class="panel event-panel">
@@ -331,6 +330,27 @@
       </section>
     </main>
 
-    <script type="module" src="/app.js?v=20260607-allplayers1"></script>
+    <dialog id="matchSourceDialog" class="match-source-dialog">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Gestão do jogo</p>
+          <h2 id="sourceDialogTitle">Fonte do jogo</h2>
+        </div>
+        <button id="closeSourceDialog" class="ghost" type="button">Fechar</button>
+      </div>
+      <div id="sourceDialogContent"></div>
+      <div class="dialog-actions">
+        <button id="deleteResultMatch" class="danger" type="button">Eliminar jogo</button>
+      </div>
+    </dialog>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <img class="footer-goose" src="/assets/goldganso.png" alt="Ganso Casa Pia" />
+        <span>Casa Pia Atlético Clube · Futebol Feminino</span>
+      </div>
+      <a href="/privacidade.html">Privacidade e tratamento de dados</a>
+    </footer>
+    <script type="module" src="/app.js?v=20260802-modal7"></script>
   </body>
 </html>
