@@ -1,5 +1,6 @@
 import http from "node:http";
-import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat, appendFile } from "node:fs/promises";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
@@ -8,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const DB_PATH = path.join(DATA_DIR, "db.json");
+const AUDIT_PATH = path.join(DATA_DIR, "audit.log");
 const OUTPUT_DIR = process.env.OUTPUT_DIR || path.join(__dirname, "outputs");
 const SOURCE_DIR =
   process.env.CASA_PIA_SOURCE_DIR ||
@@ -23,6 +25,106 @@ const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024
 const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
 let lastSync = null;
 let lastZerozeroSync = null;
+
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const sessions = new Map();
+const users = [
+  { id: String(process.env.CPAC_ADMIN_ID || "Catarina").trim(), name: String(process.env.CPAC_ADMIN_NAME || "Catarina Mendes").trim(), role: "admin", password: String(process.env.CPAC_ADMIN_PASSWORD || "") },
+  { id: String(process.env.CPAC_DELEGATE_ID || "Delegado").trim(), name: String(process.env.CPAC_DELEGATE_NAME || "Delegado").trim(), role: "delegate", password: String(process.env.CPAC_DELEGATE_PASSWORD || "") },
+];
+
+function safeEqual(left, right) {
+  const a = createHash("sha256").update(String(left)).digest();
+  const b = createHash("sha256").update(String(right)).digest();
+  return timingSafeEqual(a, b);
+}
+
+function parseCookies(req) {
+  return Object.fromEntries(String(req.headers.cookie || "").split(";").map((part) => part.trim().split("=")).filter(([key]) => key).map(([key, ...value]) => [key, decodeURIComponent(value.join("="))]));
+}
+
+function sessionUser(req) {
+  const token = parseCookies(req).cpac_session;
+  const session = token ? sessions.get(token) : null;
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) {
+    sessions.delete(token);
+    return null;
+  }
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+  return session.user;
+}
+
+function sessionCookie(token, maxAge = Math.floor(SESSION_TTL_MS / 1000)) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `cpac_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
+}
+
+function publicUser(user) {
+  return user ? { id: user.id, name: user.name, role: user.role } : null;
+}
+
+async function audit(req, user, action, status, detail = "") {
+  await mkdir(DATA_DIR, { recursive: true });
+  const entry = { at: new Date().toISOString(), user: user?.id || "anonymous", role: user?.role || "none", method: req.method, action, status, detail: String(detail || "").slice(0, 160) };
+  await appendFile(AUDIT_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+}
+
+function requireUser(req, res, roles = ["admin", "delegate"]) {
+  const user = sessionUser(req);
+  if (!user) {
+    send(res, 401, { error: "Autenticação necessária." });
+    return null;
+  }
+  if (!roles.includes(user.role)) {
+    send(res, 403, { error: "Sem permissão para esta operação." });
+    return null;
+  }
+  return user;
+}
+
+function validMutationOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  const expected = `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host}`;
+  return origin === expected;
+}
+
+function publicSnapshot(db) {
+  ensureLiveGames(db);
+  const matchReports = Object.fromEntries(
+    Object.entries(db.matchReports || {}).map(([matchId, report]) => [matchId, {
+      tactic: report.tactic || "",
+      starters: report.starters || [],
+      lineupSlots: report.lineupSlots || [],
+      bench: report.bench || [],
+      createdAt: report.createdAt || "",
+      updatedAt: report.updatedAt || "",
+    }]),
+  );
+  return {
+    meta: db.meta || {},
+    teams: db.teams || [],
+    players: db.players || [],
+    matches: (db.matches || []).map(({ source, sourceUrl, ...match }) => match),
+    matchReports,
+    live: db.live || {},
+    events: (db.events || []).map(({ notes, ...event }) => event),
+    liveGames: db.liveGames || {},
+    zerozero: db.zerozero || {},
+    currentMatch: currentMatch(db),
+  };
+}
+
+function delegateSnapshot(db) {
+  const { deletedMatchIds, ...safeDb } = db;
+  return {
+    ...safeDb,
+    matches: (db.matches || []).map(({ source, sourceUrl, ...match }) => match),
+    zerozero: db.zerozero || {},
+    currentMatch: currentMatch(db),
+  };
+}
 
 async function spreadsheetTool() {
   try {
@@ -306,8 +408,16 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
 }
 
 function preserveAppData(imported, current) {
+  const deletedMatchIds = current.deletedMatchIds || [];
+  const matchesById = new Map((imported.matches || []).map((match) => [match.id, match]));
+  (current.matches || [])
+    .filter((match) => ["MANUAL", "DELEGATE"].includes(match.source))
+    .forEach((match) => matchesById.set(match.id, match));
+  deletedMatchIds.forEach((id) => matchesById.delete(id));
   return {
     ...imported,
+    matches: [...matchesById.values()],
+    deletedMatchIds,
     events: current.events || [],
     matchReports: current.matchReports || {},
     liveGames: current.liveGames || {},
@@ -519,12 +629,69 @@ async function exportXlsx(db) {
 }
 
 async function api(req, res, url) {
+  if (req.method === "POST" && url.pathname === "/api/login") {
+    const body = await readBody(req);
+    const candidate = users.find((item) => item.id.toLowerCase() === String(body.id || "").trim().toLowerCase());
+    if (!candidate?.password || !safeEqual(body.password || "", candidate.password)) {
+      await audit(req, null, "login", "denied");
+      send(res, 401, { error: "Credenciais inválidas." });
+      return;
+    }
+    const token = randomBytes(32).toString("base64url");
+    const user = publicUser(candidate);
+    sessions.set(token, { user, expiresAt: Date.now() + SESSION_TTL_MS });
+    res.setHeader("Set-Cookie", sessionCookie(token));
+    await audit(req, user, "login", "ok");
+    send(res, 200, { user });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/logout") {
+    const user = sessionUser(req);
+    const token = parseCookies(req).cpac_session;
+    if (token) sessions.delete(token);
+    res.setHeader("Set-Cookie", sessionCookie("", 0));
+    await audit(req, user, "logout", "ok");
+    send(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/session") {
+    send(res, 200, { user: publicUser(sessionUser(req)) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/public-bootstrap") {
+    const db = await loadDb();
+    send(res, 200, publicSnapshot(db));
+    return;
+  }
+
+  if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !validMutationOrigin(req)) {
+    send(res, 403, { error: "Origem do pedido não autorizada." });
+    return;
+  }
+
+  const adminOnly = new Set(["/api/reload-source", "/api/import-xlsx", "/api/sync-excel-url", "/api/sync-zerozero", "/api/manual-match", "/api/export", "/api/audit"]);
+  const needsAdmin = adminOnly.has(url.pathname) || (req.method === "DELETE" && url.pathname.startsWith("/api/live/"));
+  const user = requireUser(req, res, needsAdmin ? ["admin"] : ["admin", "delegate"]);
+  if (!user) return;
+  if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    res.once("finish", () => audit(req, user, url.pathname, String(res.statusCode)).catch(console.error));
+  }
   let db = await loadDb();
 
   if (req.method === "GET" && url.pathname === "/api/bootstrap") {
     ensureLiveGames(db);
     db.hiddenLiveGames ||= [];
-    send(res, 200, { ...db, currentMatch: currentMatch(db) });
+    send(res, 200, user.role === "admin" ? { ...db, currentMatch: currentMatch(db) } : delegateSnapshot(db));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/audit") {
+    const text = (await exists(AUDIT_PATH)) ? await readFile(AUDIT_PATH, "utf8") : "";
+    const entries = text.trim().split("\n").filter(Boolean).slice(-250).map((line) => JSON.parse(line)).reverse();
+    send(res, 200, { entries });
     return;
   }
 
@@ -699,7 +866,24 @@ async function api(req, res, url) {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/manual-match") {
+  if (req.method === "DELETE" && url.pathname.startsWith("/api/matches/")) {
+    const matchId = decodeURIComponent(url.pathname.replace("/api/matches/", ""));
+    const before = db.matches.length;
+    db.matches = db.matches.filter((match) => match.id !== matchId);
+    db.events = (db.events || []).filter((event) => event.matchId !== matchId);
+    delete db.matchReports?.[matchId];
+    delete db.liveGames?.[matchId];
+    db.hiddenLiveGames = (db.hiddenLiveGames || []).filter((id) => id !== matchId);
+    db.deletedMatchIds ||= [];
+    if (!db.deletedMatchIds.includes(matchId)) db.deletedMatchIds.push(matchId);
+    if (db.live?.matchId === matchId) db.live = {};
+    await saveDb(db);
+    const payload = user.role === "admin" ? { ...db, currentMatch: currentMatch(db) } : delegateSnapshot(db);
+    send(res, 200, { ...payload, deleted: before - db.matches.length });
+    return;
+  }
+
+  if (req.method === "POST" && ["/api/manual-match", "/api/delegate-match"].includes(url.pathname)) {
     const body = await readBody(req);
     const level = cleanLevel(body.level || "Sub13");
     const season = String(body.season || "").trim();
@@ -725,15 +909,17 @@ async function api(req, res, url) {
       goalsFor,
       goalsAgainst,
       status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
-      source: "MANUAL",
+      source: url.pathname === "/api/manual-match" ? "MANUAL" : "DELEGATE",
       updatedAt: new Date().toISOString(),
     };
     const index = db.matches.findIndex((item) => item.id === id);
     if (index >= 0) db.matches[index] = { ...db.matches[index], ...match };
     else db.matches.push(match);
+    db.deletedMatchIds = (db.deletedMatchIds || []).filter((deletedId) => deletedId !== id);
     db.matches.sort((a, b) => `${a.season || ""}${a.level}${a.date || ""}${a.time || ""}`.localeCompare(`${b.season || ""}${b.level}${b.date || ""}${b.time || ""}`));
     await saveDb(db);
-    send(res, 200, { ...db, currentMatch: currentMatch(db), manualMatch: match });
+    const payload = user.role === "admin" ? { ...db, currentMatch: currentMatch(db) } : delegateSnapshot(db);
+    send(res, 200, { ...payload, manualMatch: user.role === "admin" ? match : (({ source, sourceUrl, ...safeMatch }) => safeMatch)(match) });
     return;
   }
 
@@ -770,6 +956,12 @@ async function staticFile(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    res.setHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+    if (process.env.NODE_ENV === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     if (url.pathname.startsWith("/api/")) await api(req, res, url);
     else await staticFile(req, res, url);
   } catch (error) {
@@ -777,6 +969,11 @@ const server = http.createServer(async (req, res) => {
     send(res, 500, { error: error.message || "Erro no servidor" });
   }
 });
+
+if (process.env.NODE_ENV === "production" && users.some((user) => !user.password)) {
+  console.error("CPAC_ADMIN_PASSWORD e CPAC_DELEGATE_PASSWORD são obrigatórias em produção.");
+  process.exit(1);
+}
 
 function startAutoSync() {
   if (!SOURCE_XLSX_URL || !AUTO_SYNC_MINUTES) return;
