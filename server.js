@@ -305,6 +305,7 @@ async function importWorkbookLegacy() {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -398,6 +399,7 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -458,6 +460,23 @@ async function seedPersistentDb() {
   }
 }
 
+function ensureTeamDefinitions(db) {
+  db.teams ||= [];
+  const definitions = [
+    { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
+    { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
+    { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
+    { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+    { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
+  ];
+  definitions.forEach((team) => {
+    const index = db.teams.findIndex((item) => item.level === team.level);
+    if (index >= 0) db.teams[index] = { ...team, ...db.teams[index] };
+    else db.teams.push(team);
+  });
+  return db;
+}
+
 async function loadDb() {
   await mkdir(DATA_DIR, { recursive: true });
   await seedPersistentDb();
@@ -465,17 +484,17 @@ async function loadDb() {
     if (SOURCE_XLSX_URL) {
       const imported = await importWorkbookUrl();
       await writeFile(DB_PATH, JSON.stringify(imported, null, 2), "utf8");
-      return imported;
+      return ensureTeamDefinitions(imported);
     }
     if (!(await exists(SOURCE_XLSX))) {
       throw new Error(`Base de dados não encontrada em ${DB_PATH}. Publica o ficheiro data/db.json ou configura CASA_PIA_XLSX.`);
     }
     const imported = await importWorkbook();
     await writeFile(DB_PATH, JSON.stringify(imported, null, 2), "utf8");
-    return imported;
+    return ensureTeamDefinitions(imported);
   }
   const text = await readFile(DB_PATH, "utf8");
-  return JSON.parse(text.replace(/^\uFEFF/, ""));
+  return ensureTeamDefinitions(JSON.parse(text.replace(/^\uFEFF/, "")));
 }
 
 async function saveDb(db) {
