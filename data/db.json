@@ -4,7 +4,7 @@
     "createdAt": "2026-05-19T14:03:12.210Z",
     "sourceDir": "C:/Users/catas/OneDrive - Universidade do Algarve/Ambiente de Trabalho/CASA PIA AC",
     "sourceWorkbook": "C:\\Users\\catas\\OneDrive - Universidade do Algarve\\Ambiente de Trabalho\\CASA PIA AC\\Casa pia.xlsx",
-    "updatedAt": "2026-07-28T18:10:51.932Z"
+    "updatedAt": "2026-07-30T16:18:19.509Z"
   },
   "teams": [
     {
@@ -13891,6 +13891,54 @@
       "status": "finished",
       "source": "ZEROZERO",
       "sourceUrl": "https://www.zerozero.pt/equipa/casa-pia-ac/359807/jogos?epoca_id=155"
+    },
+    {
+      "id": "manual_Seniores_2026_2027_jogo_manual_spc_casa",
+      "opponent": "spc",
+      "round": "",
+      "venue": "Casa",
+      "level": "Seniores",
+      "season": "2026/2027",
+      "competition": "Jogo manual",
+      "date": "",
+      "time": "",
+      "goalsFor": null,
+      "goalsAgainst": null,
+      "status": "scheduled",
+      "source": "MANUAL",
+      "updatedAt": "2026-07-30T15:19:04.496Z"
+    },
+    {
+      "id": "manual_Sub13_2026_2027_jogo_manual_spc_casa",
+      "opponent": "spc",
+      "round": "",
+      "venue": "Casa",
+      "level": "Sub13",
+      "season": "2026/2027",
+      "competition": "Jogo manual",
+      "date": "",
+      "time": "",
+      "goalsFor": null,
+      "goalsAgainst": null,
+      "status": "scheduled",
+      "source": "MANUAL",
+      "updatedAt": "2026-07-30T15:08:01.101Z"
+    },
+    {
+      "id": "manual_Sub19_2026_2027_jogo_manual_scp_casa",
+      "opponent": "SCP",
+      "round": "",
+      "venue": "Casa",
+      "level": "Sub19",
+      "season": "2026/2027",
+      "competition": "Jogo manual",
+      "date": "",
+      "time": "",
+      "goalsFor": null,
+      "goalsAgainst": null,
+      "status": "scheduled",
+      "source": "MANUAL",
+      "updatedAt": "2026-07-30T15:23:11.165Z"
     }
   ],
   "matchReports": {
@@ -13977,20 +14025,63 @@
       ],
       "updatedAt": "2026-05-19T10:37:07.422Z",
       "createdAt": "2026-05-19T10:37:07.422Z"
+    },
+    "manual_Sub19_2026_2027_jogo_manual_scp_casa": {
+      "matchId": "manual_Sub19_2026_2027_jogo_manual_scp_casa",
+      "delegate": "ZE",
+      "tactic": "1-3-4-3",
+      "notes": "",
+      "starters": [
+        "Agnes Mcpeack",
+        "Alice Geada",
+        "Aline Arrulo",
+        "Alyah Monteiro",
+        "Ariana Semedo",
+        "Ariela Rangel",
+        "Bárbara Junqueira",
+        "Beatrice Amorim",
+        "Beatriz Amoroso",
+        "Beatriz Oliveira",
+        "Beatriz Correia"
+      ],
+      "lineupSlots": [
+        "Agnes Mcpeack",
+        "Alice Geada",
+        "Aline Arrulo",
+        "Alyah Monteiro",
+        "Ariana Semedo",
+        "Ariela Rangel",
+        "Bárbara Junqueira",
+        "Beatrice Amorim",
+        "Beatriz Amoroso",
+        "Beatriz Oliveira",
+        "Beatriz Correia"
+      ],
+      "bench": [
+        "Carolina Temudo",
+        "Clara Bento",
+        "Cláudia Quadros",
+        "Clara Silva",
+        "Denise Ribeiro",
+        "Eliana Rodrigues",
+        "Diana Carrilho"
+      ],
+      "updatedAt": "2026-07-30T16:18:19.509Z",
+      "createdAt": "2026-07-30T15:23:11.292Z"
     }
   },
   "live": {
-    "matchId": "Oliv_TE",
+    "matchId": "manual_Sub19_2026_2027_jogo_manual_scp_casa",
     "minute": 0,
     "period": "Pre-jogo",
-    "homeScore": 0,
+    "homeScore": 1,
     "awayScore": 0,
     "status": "Por iniciar",
     "cornersFor": 0,
     "cornersAgainst": 0,
-    "updatedAt": "2026-07-28T17:52:17.980Z",
+    "updatedAt": "2026-07-30T16:12:06.371Z",
     "liveEnded": false,
-    "event": "Início da 2ª parte"
+    "event": "Início do jogo"
   },
   "events": [
     {
@@ -14041,12 +14132,41 @@
       "updatedAt": "2026-07-28T17:52:17.980Z",
       "liveEnded": false,
       "event": "Início da 2ª parte"
+    },
+    "manual_Sub19_2026_2027_jogo_manual_scp_casa": {
+      "matchId": "manual_Sub19_2026_2027_jogo_manual_scp_casa",
+      "minute": 0,
+      "period": "Pre-jogo",
+      "homeScore": 1,
+      "awayScore": 0,
+      "status": "Por iniciar",
+      "cornersFor": 0,
+      "cornersAgainst": 0,
+      "updatedAt": "2026-07-30T16:12:06.371Z",
+      "liveEnded": false,
+      "event": "Início do jogo"
+    },
+    "teste_sem_jogo": {
+      "matchId": "manual_Sub19_2026_2027_jogo_manual_scp_casa",
+      "minute": 0,
+      "period": "Pre-jogo",
+      "homeScore": 0,
+      "awayScore": 0,
+      "status": "Por iniciar",
+      "cornersFor": 0,
+      "cornersAgainst": 0,
+      "updatedAt": "2026-07-30T16:15:09.797Z",
+      "liveEnded": false,
+      "event": "Início do jogo"
     }
   },
   "hiddenLiveGames": [
     "Alve_1J_1TE",
     "LeoesPS_TE",
-    "RealSC_1J_CI"
+    "RealSC_1J_CI",
+    "manual_Sub13_2026_2027_jogo_manual_spc_casa",
+    "manual_Seniores_2026_2027_jogo_manual_spc_casa",
+    "manual_Sub19_2026_2027_jogo_manual_scp_casa"
   ],
   "fpf": {
     "lastSync": {
