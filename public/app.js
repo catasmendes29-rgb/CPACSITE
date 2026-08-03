@@ -8,7 +8,7 @@ const state = {
   lineupSlots: [],
   selectedSlot: null,
   pickerMode: "starter",
-  user: null,
+  user: JSON.parse(localStorage.getItem("cpacUser") || "null"),
   liveDetailMatchId: null,
   competitionFilter: "all",
   teamsLevel: "Sub13",
@@ -16,15 +16,12 @@ const state = {
   playerSearch: "",
   resultsSeason: "all",
   reportSetupVisible: true,
-  sourceMatchId: null,
+  currentView: "data",
+  refreshingLive: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
-document.addEventListener("error", (event) => {
-  const image = event.target;
-  if (image instanceof HTMLImageElement && image.matches("[data-player-photo]")) image.remove();
-}, true);
 const viewTitles = { data: "Resultados", teams: "Equipas", delegate: "Delegado", live: "Live" };
 const viewHashes = { resultados: "data", equipas: "teams", delegado: "delegate", live: "live" };
 const delegateTeams = [
@@ -36,8 +33,11 @@ const delegateTeams = [
 ];
 
 async function request(route, options = {}) {
-  const response = await fetch(route, {
+  const method = (options.method || "GET").toUpperCase();
+  const freshRoute = method === "GET" ? `${route}${route.includes("?") ? "&" : "?"}_=${Date.now()}` : route;
+  const response = await fetch(freshRoute, {
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
     ...options,
   });
   if (!response.ok) throw new Error(await response.text());
@@ -197,7 +197,7 @@ function eventPlayers() {
 }
 
 function setView(view) {
-  if (view === "delegate" && !state.user && $(".delegate-tab").hidden) view = "data";
+  state.currentView = view;
   if (view === "delegate" && !canDelegate()) {
     $(".delegate-tab").hidden = false;
   }
@@ -210,6 +210,7 @@ function setView(view) {
   if (view === "live") {
     renderLiveHub();
     if (state.liveDetailMatchId) openLiveDetail(state.liveDetailMatchId);
+    refreshLive();
   }
   renderAuth();
 }
@@ -332,12 +333,11 @@ function selectedSyncSeason() {
   return state.resultsSeason && state.resultsSeason !== "all" ? state.resultsSeason : currentSeasonLabel();
 }
 
-async function login(id, pass) {
-  const result = await request("/api/login", {
-    method: "POST",
-    body: JSON.stringify({ id, password: pass }),
-  });
-  return result.user;
+function login(id, pass) {
+  const normalized = id.trim().toLowerCase();
+  if (normalized === "delegado" && pass === "0000") return { id: "Delegado", name: "Delegado", role: "delegate" };
+  if (normalized === "catarina" && pass === "kikomiau") return { id: "Catarina", name: "Catarina", role: "admin" };
+  return null;
 }
 
 function renderSelectors() {
@@ -471,7 +471,7 @@ function pitchMarkup(names, tactic, total, options = {}) {
           const name = names[index] || "";
           if (!name) return `<span class="player-dot empty" style="left:${slot.x}%;top:${slot.y}%">+</span>`;
           if (withPhotos) {
-            return `<span class="player-dot photo-dot" data-initials="${initials(name)}" style="left:${slot.x}%;top:${slot.y}%"><img data-player-photo src="${playerPhotoSrc(name, level)}" alt="" /><small>${name}</small></span>`;
+            return `<span class="player-dot photo-dot" style="left:${slot.x}%;top:${slot.y}%"><img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" /><small>${name}</small></span>`;
           }
           return `<span class="player-dot" style="left:${slot.x}%;top:${slot.y}%">${name}</span>`;
         })
@@ -483,8 +483,8 @@ function pitchMarkup(names, tactic, total, options = {}) {
 function livePlayerCard(name, index, level) {
   return `
     <article class="live-player-card">
-      <div class="player-photo" data-initials="${initials(name)}">
-        <img data-player-photo src="${playerPhotoSrc(name, level)}" alt="" />
+      <div class="player-photo">
+        <img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" />
       </div>
       <strong>${index + 1}. ${name}</strong>
     </article>
@@ -781,6 +781,8 @@ function renderDataPage() {
   const summary = levelSummary(level);
   $("#dataCards").innerHTML = [
     ["Jogos", summary.matches, ""],
+    ["Realizados", summary.finished, ""],
+    ["Por jogar", summary.scheduled, ""],
     ["Vitórias", summary.wins, "result-win"],
     ["Empates", summary.draws, "result-draw"],
     ["Derrotas", summary.losses, "result-loss"],
@@ -802,16 +804,13 @@ function renderDataPage() {
       const rows = matches.map((match) => {
         const kind = resultKind(match);
         const result = kind === "pending" ? "Por jogar" : `<span class="score"><span class="goals-for">${match.goalsFor}</span>-<span class="goals-against">${match.goalsAgainst}</span></span>`;
-        return {
-          cells: [
-            match.round || "-",
-            match.opponent,
-            match.venue || "-",
-            result,
-            `<span class="badge ${kind}">${resultLetter(kind)}</span>`,
-          ],
-          attrs: isAdmin() ? `class="source-match-row" data-source-match-id="${match.id}" tabindex="0"` : "",
-        };
+        return [
+          match.round || "-",
+          match.opponent,
+          match.venue || "-",
+          result,
+          `<span class="badge ${kind}">${resultLetter(kind)}</span>`,
+        ];
       });
       return `<h3 class="competition-title">${competition}</h3>${table(["Jornada", "Adversário", "Local", "Resultado", "Estado"], rows)}`;
     })
@@ -973,12 +972,9 @@ function renderLiveDetailSheets() {
   const match = matchById(matchId);
   const total = state.db.teams.find((team) => team.level === match?.level)?.format || (report.starters || []).length || 11;
   const starters = report.starters || [];
-  const fallbackTactic = total === 7 ? "1-3-2-1" : total === 9 ? "1-3-3-2" : "1-4-3-3";
-  const tacticParts = String(report.tactic || "").split("-").map(Number).filter((part) => Number.isFinite(part) && part > 0);
-  const effectiveTactic = tacticParts.reduce((sum, part) => sum + part, 0) === total ? report.tactic : fallbackTactic;
   lineup.innerHTML = `
-    <h3>Tática ${effectiveTactic}</h3>
-    ${pitchMarkup(starters, effectiveTactic, total, { withPhotos: true, level: match?.level })}
+    <h3>Tática ${report.tactic || "-"}</h3>
+    ${pitchMarkup(starters, report.tactic, total, { withPhotos: true, level: match?.level })}
     <p><strong>Suplentes</strong></p>
     <div class="chip-list">${(report.bench || []).map((name) => `<span>${name}</span>`).join("") || "<span>Sem banco guardado</span>"}</div>
   `;
@@ -986,11 +982,7 @@ function renderLiveDetailSheets() {
 
 function table(headers, rows) {
   const body = rows.length
-    ? rows.map((row) => {
-        const cells = Array.isArray(row) ? row : row.cells;
-        const attrs = Array.isArray(row) ? "" : row.attrs || "";
-        return `<tr ${attrs}>${cells.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`;
-      }).join("")
+    ? rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`).join("")
     : `<tr><td colspan="${headers.length}">Sem dados registados.</td></tr>`;
   return `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
 }
@@ -1039,9 +1031,7 @@ async function activateSelectedMatch() {
 }
 
 async function bootstrap() {
-  const session = await request("/api/session");
-  state.user = session.user;
-  state.db = await request(state.user ? "/api/bootstrap" : "/api/public-bootstrap");
+  state.db = await request("/api/bootstrap");
   state.level = state.db.teams[0]?.level || "Sub13";
   state.dataLevel = state.level;
   state.teamsLevel = state.level;
@@ -1052,19 +1042,43 @@ async function bootstrap() {
 }
 
 async function refreshLive() {
-  const fresh = await request(state.user ? "/api/bootstrap" : "/api/public-bootstrap");
-  state.db.live = fresh.live;
-  state.db.liveGames = fresh.liveGames;
-  state.db.hiddenLiveGames = fresh.hiddenLiveGames;
-  state.db.events = fresh.events;
-  state.db.matches = fresh.matches;
-  state.db.matchReports = fresh.matchReports;
-  renderLive();
-  renderTimeline();
-  renderDataPage();
-  renderTeamsPage();
-  renderLiveHub();
-  updateMatchControlButtons();
+  if (state.refreshingLive) return;
+  state.refreshingLive = true;
+  try {
+    const fresh = await request("/api/bootstrap");
+    state.db.live = fresh.live;
+    state.db.liveGames = fresh.liveGames;
+    state.db.hiddenLiveGames = fresh.hiddenLiveGames;
+    state.db.events = fresh.events;
+    state.db.matches = fresh.matches;
+    state.db.matchReports = fresh.matchReports;
+    if (state.selectedMatch) state.selectedMatch = matchById(state.selectedMatch.id) || state.selectedMatch;
+
+    if (state.currentView === "live") {
+      const detailStillAvailable = state.liveDetailMatchId && liveGames().some(({ match }) => match.id === state.liveDetailMatchId);
+      if (state.liveDetailMatchId && !detailStillAvailable) {
+        state.liveDetailMatchId = null;
+        $("#liveListPanel").hidden = false;
+        $("#liveDetailPanel").hidden = true;
+      }
+      renderLiveHub();
+      if (state.liveDetailMatchId) {
+        renderLive();
+        renderTimeline();
+      }
+    }
+    if (state.currentView === "data") renderDataPage();
+    if (state.currentView === "teams") renderTeamsPage();
+    if (state.currentView === "delegate") {
+      renderLive();
+      renderTimeline();
+      renderDelegateMode();
+      updateMatchControlButtons();
+    }
+    renderAuth();
+  } finally {
+    state.refreshingLive = false;
+  }
 }
 
 function applyFreshDb(fresh) {
@@ -1122,38 +1136,29 @@ $("#loginOpen").addEventListener("click", () => {
   setView("delegate");
 });
 
-$("#loginSubmit").addEventListener("click", async () => {
-  $("#loginError").textContent = "A validar...";
-  try {
-    state.user = await login($("#loginId").value, $("#loginPass").value);
-    $("#loginPass").value = "";
-    $("#loginError").textContent = "";
-    await bootstrap();
-    setView("delegate");
-  } catch {
-    state.user = null;
+$("#loginSubmit").addEventListener("click", () => {
+  const user = login($("#loginId").value, $("#loginPass").value);
+  if (!user) {
     $("#loginError").textContent = "Credenciais inválidas.";
+    return;
   }
-});
-
-$("#logoutBtn").addEventListener("click", async () => {
-  await request("/api/logout", { method: "POST" });
-  state.user = null;
-  await bootstrap();
+  state.user = user;
+  localStorage.setItem("cpacUser", JSON.stringify(user));
+  $("#loginError").textContent = "";
+  renderAuth();
+  refreshLive();
   setView("delegate");
 });
 
+$("#logoutBtn").addEventListener("click", () => {
+  state.user = null;
+  localStorage.removeItem("cpacUser");
+  renderAuth();
+  refreshLive();
+  setView("data");
+});
+
 document.addEventListener("click", async (event) => {
-  const sourceRow = event.target.closest(".source-match-row");
-  if (sourceRow && isAdmin()) {
-    const match = matchById(sourceRow.dataset.sourceMatchId);
-    const source = match?.source || (match?.sourceUrl ? "ZEROZERO" : "EXCEL");
-    state.sourceMatchId = match?.id || null;
-    $("#sourceDialogTitle").textContent = match ? `${match.level} vs ${match.opponent}` : "Fonte do jogo";
-    $("#sourceDialogContent").innerHTML = `<p><strong>Fonte:</strong> ${source}</p>${match?.sourceUrl ? `<p><a href="${match.sourceUrl}" target="_blank" rel="noreferrer">Abrir fonte original</a></p>` : ""}`;
-    $("#matchSourceDialog").showModal();
-    return;
-  }
   const teamPlayer = event.target.closest(".team-player-card");
   if (teamPlayer) {
     state.selectedPlayerId = teamPlayer.dataset.playerId;
@@ -1177,22 +1182,6 @@ document.addEventListener("click", async (event) => {
     }
     await refreshLive();
   }
-});
-
-$("#closeSourceDialog")?.addEventListener("click", () => {
-  $("#matchSourceDialog").close();
-  state.sourceMatchId = null;
-});
-
-$("#deleteResultMatch")?.addEventListener("click", async () => {
-  if (!isAdmin() || !state.sourceMatchId) return;
-  const match = matchById(state.sourceMatchId);
-  if (!confirm(`Eliminar o jogo contra ${match?.opponent || "o adversário"}? A ficha, os eventos e o Live associados também serão apagados.`)) return;
-  const fresh = await request(`/api/matches/${encodeURIComponent(state.sourceMatchId)}`, { method: "DELETE" });
-  $("#matchSourceDialog").close();
-  state.sourceMatchId = null;
-  applyFreshDb(fresh);
-  renderDataPage();
 });
 
 $("#backToLiveList").addEventListener("click", () => {
@@ -1265,7 +1254,7 @@ async function ensureDelegateMatch() {
     alert("Escreve a equipa adversária.");
     return null;
   }
-  const fresh = await request("/api/delegate-match", {
+  const fresh = await request("/api/manual-match", {
     method: "POST",
     body: JSON.stringify({
       level: state.level,
@@ -1277,9 +1266,6 @@ async function ensureDelegateMatch() {
   });
   state.db = fresh;
   state.selectedMatch = fresh.manualMatch;
-  state.dataLevel = fresh.manualMatch.level;
-  state.resultsSeason = fresh.manualMatch.season || "all";
-  state.competitionFilter = "all";
   state.reportSetupVisible = true;
   await activateSelectedMatch();
   return state.selectedMatch;
@@ -1322,16 +1308,19 @@ $("#saveReport").addEventListener("click", async () => {
 
 $("#clearReport").addEventListener("click", async () => {
   if (!state.selectedMatch) return;
-  if (!confirm("Eliminar este jogo? A ficha, os eventos e a respetiva publicação Live serão apagados.")) return;
-  const matchId = state.selectedMatch.id;
-  const fresh = await request(`/api/matches/${encodeURIComponent(matchId)}`, { method: "DELETE" });
-  state.selectedMatch = null;
-  state.liveDetailMatchId = null;
+  if (!confirm("Limpar a ficha de jogo deste jogo? Os eventos registados ficam guardados.")) return;
   resetLineup();
   $("#delegateName").value = "";
   $("#tacticInput").value = "";
   $("#notesInput").value = "";
-  applyFreshDb(fresh);
+  await request("/api/report", {
+    method: "POST",
+    body: JSON.stringify({
+      matchId: state.selectedMatch.id,
+      clear: true,
+    }),
+  });
+  await refreshLive();
   state.reportSetupVisible = true;
   renderAll();
 });
@@ -1516,5 +1505,17 @@ $("#saveManualMatch")?.addEventListener("click", async () => {
 
 await bootstrap();
 setInterval(() => {
-  if (state.db) refreshLive().catch(() => {});
-}, 3000);
+  if (document.visibilityState === "visible" && state.currentView === "live") refreshLive();
+}, 5000);
+
+window.addEventListener("focus", () => {
+  if (state.currentView === "live") refreshLive();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.currentView === "live") refreshLive();
+});
+
+window.addEventListener("pageshow", () => {
+  if (state.currentView === "live") refreshLive();
+});
