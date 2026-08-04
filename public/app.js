@@ -805,6 +805,36 @@ function resultLetter(kind) {
   return { win: "V", draw: "E", loss: "D", pending: "-" }[kind];
 }
 
+function availableLevelLabelsForSeason() {
+  const matches = seasonMatches();
+  const levels = [...new Set(matches.map((match) => match.level).filter(Boolean))];
+  return levels
+    .map((level) => teamOptions().find((team) => team.level === level)?.label || level)
+    .sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
+}
+
+function dataEmptyMessage() {
+  const season = state.resultsSeason === "all" ? "todas as épocas" : state.resultsSeason;
+  const level = state.dataLevel === "all"
+    ? "todos os escalões"
+    : teamOptions().find((team) => team.level === state.dataLevel)?.label || state.dataLevel;
+  const available = availableLevelLabelsForSeason();
+  if (state.dataLevel !== "all" && available.length) {
+    return `
+      <div class="empty-state">
+        <strong>Sem jogos em ${level} para ${season}.</strong>
+        <span>Nesta época existem jogos em: ${available.map(escapeHtml).join(", ")}.</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="empty-state">
+      <strong>Sem jogos para os filtros selecionados.</strong>
+      <span>Experimenta mudar a época, escalão ou competição.</span>
+    </div>
+  `;
+}
+
 function renderDataPage() {
   const level = state.dataLevel;
   renderResultsSeasonSelect();
@@ -834,7 +864,7 @@ function renderDataPage() {
     .map(([competition, matches]) => {
       return `<h3 class="competition-title">${escapeHtml(competition)}</h3>${historyTable(matches)}`;
     })
-    .join("") || "<p>Sem jogos para esta competição.</p>";
+    .join("") || dataEmptyMessage();
 }
 
 function playerAppearances(player) {
