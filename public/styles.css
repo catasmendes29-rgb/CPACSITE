@@ -699,14 +699,9 @@ textarea {
 }
 
 .delegate-actions {
-  grid-column: 1;
-  grid-row: 2;
-  position: relative;
-  z-index: 2;
   display: grid;
   gap: 8px;
-  padding: 12px;
-  box-shadow: none;
+  margin-top: 12px;
 }
 
 .delegate-actions button {
@@ -717,40 +712,42 @@ textarea {
 #delegateSetup > .compact {
   grid-column: 1;
   grid-row: 1;
-  position: static;
 }
 
 #delegateSetup > .lineup-panel {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1;
 }
 
 .site-footer {
   width: min(100% - 36px, 1280px);
-  margin: 28px auto 0;
-  padding: 18px 0 28px;
+  margin: 34px auto 0;
+  padding: 16px 0 22px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  color: rgba(255,255,255,0.55);
-  border-top: 1px solid rgba(255,255,255,0.14);
+  justify-content: center;
+  gap: 10px;
+  color: rgba(255,255,255,0.62);
+  border-top: 1px solid rgba(155,128,54,0.28);
 }
 
 .site-footer img {
-  width: 38px;
-  height: 38px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
+  opacity: 0.78;
+  filter: drop-shadow(0 0 10px rgba(155,128,54,0.22));
 }
 
 .site-footer span {
-  flex: 1;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .site-footer a {
-  color: var(--red);
+  color: var(--gold-soft);
   font-weight: 900;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .ghost {
@@ -1450,8 +1447,7 @@ th {
   }
 
   #delegateSetup > .compact,
-  #delegateSetup > .lineup-panel,
-  #delegateSetup > .delegate-actions {
+  #delegateSetup > .lineup-panel {
     grid-column: 1;
     grid-row: auto;
   }
