@@ -1472,6 +1472,33 @@ th {
   font-weight: 800;
 }
 
+.empty-state {
+  padding: 18px;
+  color: #fff;
+  background: #0f0f0f;
+  border-left: 5px solid var(--gold);
+  border-top: 1px solid rgba(155,128,54,0.35);
+}
+
+.empty-state strong,
+.empty-state span {
+  display: block;
+}
+
+.empty-state strong {
+  color: var(--gold-soft);
+  font-family: var(--condensed);
+  font-size: 1.05rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.empty-state span {
+  margin-top: 8px;
+  color: rgba(255,255,255,0.82);
+  font-weight: 700;
+}
+
 .manual-match-form {
   display: grid;
   grid-template-columns: repeat(5, minmax(130px, 1fr));
