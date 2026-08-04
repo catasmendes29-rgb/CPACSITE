@@ -60,6 +60,15 @@ function levelPlayers(level = state.level) {
     .filter((player) => player.level === level);
 }
 
+function teamOptions() {
+  const byLevel = new Map();
+  [...(state.db?.teams || []), ...delegateTeams].forEach((team) => {
+    if (!team?.level || byLevel.has(team.level)) return;
+    byLevel.set(team.level, team);
+  });
+  return [...byLevel.values()];
+}
+
 function allPlayers() {
   return [...state.db.players].sort((a, b) => a.name.localeCompare(b.name, "pt", { sensitivity: "base" }));
 }
@@ -333,6 +342,25 @@ function selectedSyncSeason() {
   return state.resultsSeason && state.resultsSeason !== "all" ? state.resultsSeason : currentSeasonLabel();
 }
 
+function zerozeroStartSeason() {
+  return availableSeasons()[0] || "2024/2025";
+}
+
+function keepResultFilters(callback) {
+  const filters = {
+    dataLevel: state.dataLevel,
+    teamsLevel: state.teamsLevel,
+    resultsSeason: state.resultsSeason,
+    competitionFilter: state.competitionFilter,
+  };
+  callback();
+  const teams = teamOptions();
+  if (teams.some((team) => team.level === filters.dataLevel)) state.dataLevel = filters.dataLevel;
+  if (teams.some((team) => team.level === filters.teamsLevel)) state.teamsLevel = filters.teamsLevel;
+  if (filters.resultsSeason === "all" || availableSeasons().includes(filters.resultsSeason)) state.resultsSeason = filters.resultsSeason;
+  state.competitionFilter = filters.competitionFilter;
+}
+
 function login(id, pass) {
   const normalized = id.trim().toLowerCase();
   if (normalized === "delegado" && pass === "0000") return { id: "Delegado", name: "Delegado", role: "delegate" };
@@ -353,7 +381,7 @@ function renderSelectors() {
     if (manualLevelSelect) manualLevelSelect.append(option(team.label, team.level));
   });
 
-  state.db.teams.forEach((team) => {
+  teamOptions().forEach((team) => {
     dataLevelSelect.append(option(team.label, team.level));
   });
 
@@ -838,8 +866,8 @@ function renderTeamsPage() {
   const teamsSelect = $("#teamsLevelSelect");
   if (!teamsSelect) return;
   teamsSelect.innerHTML = "";
-  state.db.teams.forEach((team) => teamsSelect.append(option(team.label, team.level)));
-  if (!state.db.teams.some((team) => team.level === state.teamsLevel)) state.teamsLevel = state.db.teams[0]?.level || "Sub13";
+  teamOptions().forEach((team) => teamsSelect.append(option(team.label, team.level)));
+  if (!teamOptions().some((team) => team.level === state.teamsLevel)) state.teamsLevel = teamOptions()[0]?.level || "Sub13";
   teamsSelect.value = state.teamsLevel;
 
   const players = levelPlayers(state.teamsLevel);
@@ -970,7 +998,7 @@ function renderLiveDetailSheets() {
   if (!lineup || !matchId) return;
   const report = state.db.matchReports[matchId] || {};
   const match = matchById(matchId);
-  const total = state.db.teams.find((team) => team.level === match?.level)?.format || (report.starters || []).length || 11;
+  const total = teamOptions().find((team) => team.level === match?.level)?.format || (report.starters || []).length || 11;
   const starters = report.starters || [];
   lineup.innerHTML = `
     <h3>Tática ${report.tactic || "-"}</h3>
@@ -1032,7 +1060,7 @@ async function activateSelectedMatch() {
 
 async function bootstrap() {
   state.db = await request("/api/bootstrap");
-  state.level = state.db.teams[0]?.level || "Sub13";
+  state.level = teamOptions()[0]?.level || "Sub13";
   state.dataLevel = state.level;
   state.teamsLevel = state.level;
   restoreActiveDelegateMatch();
@@ -1083,9 +1111,9 @@ async function refreshLive() {
 
 function applyFreshDb(fresh) {
   state.db = fresh;
-  state.level = state.db.teams.find((team) => team.level === state.level)?.level || state.db.teams[0]?.level || "Sub13";
-  state.dataLevel = state.db.teams.find((team) => team.level === state.dataLevel)?.level || state.level;
-  state.teamsLevel = state.db.teams.find((team) => team.level === state.teamsLevel)?.level || state.level;
+  state.level = teamOptions().find((team) => team.level === state.level)?.level || teamOptions()[0]?.level || "Sub13";
+  state.dataLevel = teamOptions().find((team) => team.level === state.dataLevel)?.level || state.level;
+  state.teamsLevel = teamOptions().find((team) => team.level === state.teamsLevel)?.level || state.level;
   restoreActiveDelegateMatch();
   renderAll();
   renderAuth();
@@ -1424,11 +1452,11 @@ $("#reloadSource")?.addEventListener("click", async () => {
 
 $("#syncZerozeroDryRun")?.addEventListener("click", async () => {
   if (!isAdmin()) return;
-  const season = selectedSyncSeason();
-  $("#syncStatus").textContent = `A testar ZeroZero da época ${season}...`;
+  const season = zerozeroStartSeason();
+  $("#syncStatus").textContent = `A testar ZeroZero desde ${season} até à época atual...`;
   const result = await request("/api/sync-zerozero", {
     method: "POST",
-    body: JSON.stringify({ dryRun: true, season }),
+    body: JSON.stringify({ dryRun: true, season, untilCurrent: true }),
   });
   $("#syncStatus").textContent = result.status?.ok
     ? `Teste ZeroZero concluído: ${result.status.fetched || 0} jogos encontrados.`
@@ -1437,15 +1465,16 @@ $("#syncZerozeroDryRun")?.addEventListener("click", async () => {
 
 $("#syncZerozero")?.addEventListener("click", async () => {
   if (!isAdmin()) return;
-  const season = selectedSyncSeason();
-  $("#syncStatus").textContent = `A sincronizar resultados ZeroZero da época ${season}...`;
+  const season = zerozeroStartSeason();
+  $("#syncStatus").textContent = `A sincronizar resultados ZeroZero desde ${season} até à época atual...`;
   const fresh = await request("/api/sync-zerozero", {
     method: "POST",
-    body: JSON.stringify({ dryRun: false, season, updateResults: true }),
+    body: JSON.stringify({ dryRun: false, season, untilCurrent: true, updateResults: true }),
   });
   if (fresh.status?.ok) {
-    applyFreshDb(fresh);
-    $("#syncStatus").textContent = `ZeroZero sincronizado: ${fresh.status.fetched || 0} jogos aplicados aos Resultados.`;
+    keepResultFilters(() => applyFreshDb(fresh));
+    renderAll();
+    $("#syncStatus").textContent = `ZeroZero sincronizado: ${fresh.status.fetched || 0} jogos de todas as épocas aplicados aos Resultados.`;
   } else {
     $("#syncStatus").textContent = `Não foi possível sincronizar o ZeroZero: ${fresh.status?.error || "erro desconhecido"}.`;
   }
@@ -1453,16 +1482,15 @@ $("#syncZerozero")?.addEventListener("click", async () => {
 
 $("#syncZerozeroUntilCurrent")?.addEventListener("click", async () => {
   if (!isAdmin()) return;
-  const season = selectedSyncSeason();
+  const season = zerozeroStartSeason();
   $("#syncStatus").textContent = `A sincronizar ZeroZero desde ${season} até à época atual...`;
   const fresh = await request("/api/sync-zerozero", {
     method: "POST",
     body: JSON.stringify({ dryRun: false, season, untilCurrent: true, updateResults: true }),
   });
   if (fresh.status?.ok) {
-    applyFreshDb(fresh);
-    state.resultsSeason = "all";
-    renderResultsSeasonSelect();
+    keepResultFilters(() => applyFreshDb(fresh));
+    renderAll();
     $("#syncStatus").textContent = `ZeroZero sincronizado até à atualidade: ${fresh.status.fetched || 0} jogos aplicados.`;
   } else {
     $("#syncStatus").textContent = `Não foi possível sincronizar até à atualidade: ${fresh.status?.error || "erro desconhecido"}.`;
