@@ -92,6 +92,16 @@ function parseMatches(html, team, epocaId) {
   return matches;
 }
 
+function mergeMatches(existing = [], incoming = []) {
+  const byId = new Map(existing.map((match) => [match.id, match]));
+  incoming.forEach((match) => {
+    byId.set(match.id, { ...(byId.get(match.id) || {}), ...match });
+  });
+  return [...byId.values()].sort((a, b) =>
+    `${a.season || ""}${a.level}${a.date || ""}${a.time || ""}`.localeCompare(`${b.season || ""}${b.level}${b.date || ""}${b.time || ""}`)
+  );
+}
+
 async function fetchTeam(team, epocaId) {
   const url = `https://www.zerozero.pt/equipa/casa-pia-ac/${team.zerozeroId}/jogos?epoca_id=${epocaId}`;
   const response = await fetch(url, {
@@ -149,7 +159,7 @@ export async function syncZerozeroResults(db, options = {}) {
     },
   };
   if (!dryRun && updateResults) {
-    nextDb.matches = matches;
+    nextDb.matches = mergeMatches(db.matches, matches);
   }
   return {
     db: dryRun ? db : nextDb,
