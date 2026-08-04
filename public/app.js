@@ -343,7 +343,7 @@ function selectedSyncSeason() {
 }
 
 function zerozeroStartSeason() {
-  return availableSeasons()[0] || "2024/2025";
+  return "2024/2025";
 }
 
 function keepResultFilters(callback) {
