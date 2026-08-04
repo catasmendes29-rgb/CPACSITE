@@ -101,6 +101,46 @@ function slugKey(value) {
   return playerKey(value).replace(/\s+/g, "_");
 }
 
+function ensureBaseShape(db) {
+  let changed = false;
+  db.meta ||= { club: "Casa Pia AC" };
+  db.teams ||= [];
+  db.players ||= [];
+  db.matches ||= [];
+  db.events ||= [];
+  db.matchReports ||= {};
+  db.liveGames ||= {};
+  db.hiddenLiveGames ||= [];
+  const requiredTeams = [
+    { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
+    { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
+    { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
+    { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+    { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
+  ];
+  for (const team of requiredTeams) {
+    if (!db.teams.some((item) => item.level === team.level)) {
+      db.teams.push(team);
+      changed = true;
+    }
+  }
+  for (const match of db.matches) {
+    if (!match.season) {
+      match.season = EXCEL_DEFAULT_SEASON;
+      changed = true;
+    }
+  }
+  for (const player of db.players) {
+    for (const item of player.history || []) {
+      if (!item.season) {
+        item.season = EXCEL_DEFAULT_SEASON;
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
 function numberValue(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -371,7 +411,12 @@ async function loadDb() {
     return imported;
   }
   const text = await readFile(DB_PATH, "utf8");
-  return JSON.parse(text.replace(/^\uFEFF/, ""));
+  const db = JSON.parse(text.replace(/^\uFEFF/, ""));
+  if (ensureBaseShape(db)) {
+    db.meta.migratedAt = new Date().toISOString();
+    await saveDb(db);
+  }
+  return db;
 }
 
 async function saveDb(db) {
