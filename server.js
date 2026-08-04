@@ -1,2410 +1,863 @@
-:root {
-  --black: #020202;
-  --ink: #101010;
-  --muted: #5f646b;
-  --line: #d7d7d2;
-  --paper: #f4f4f0;
-  --white: #fff;
-  --red: #d7192a;
-  --gold: #9b8036;
-  --gold-dark: #6f5a22;
-  --gold-soft: #c2a857;
-  --grass: #187844;
-  --grass-dark: #126137;
-  --condensed: "Arial Narrow", "Roboto Condensed", "Oswald", "Impact", sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Inter, Segoe UI, Arial, sans-serif;
-  color: var(--ink);
-  background:
-    linear-gradient(180deg, #000 0%, #000 24rem, #111 24rem, #ececea 43rem, #fff 100%);
-  min-height: 100vh;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  min-height: 80px;
-  padding: 12px clamp(16px, 4vw, 46px);
-  color: var(--white);
-  background: #000;
-  border-bottom: 1px solid rgba(155, 128, 54, 0.55);
-  backdrop-filter: none;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-transform: uppercase;
-}
-
-.brand strong,
-.brand span {
-  display: block;
-}
-
-.brand strong {
-  font-family: var(--condensed);
-  font-size: 1.02rem;
-  letter-spacing: 0.02em;
-}
-
-.brand span {
-  color: var(--gold-soft);
-  font-size: 0.82rem;
-}
-
-.crest {
-  width: 44px;
-  height: 50px;
-  object-fit: contain;
-}
-
-.tabs,
-.match-controls,
-.lineup-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tab,
-button,
-.download {
-  min-height: 44px;
-  border: 1px solid transparent;
-  border-radius: 0;
-  padding: 0 18px;
-  cursor: pointer;
-  text-decoration: none;
-  font-family: var(--condensed);
-  font-weight: 900;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
-}
-
-button,
-.download {
-  color: #000;
-  background: #fff;
-}
-
-button:hover,
-.download:hover {
-  transform: translateY(-1px);
-}
-
-.tab,
-.filter,
-.match-controls button {
-  color: var(--white);
-  background: #111;
-  border-color: #252525;
-}
-
-.tab.active,
-.filter.active,
-.primary {
-  color: #000;
-  background: linear-gradient(180deg, var(--gold-soft), var(--gold));
-  border-color: var(--gold);
-  box-shadow: 0 12px 26px rgba(155,128,54,0.26);
-}
-
-.auth-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #fff;
-}
-
-.auth-box span {
-  color: #d8d8d8;
-  font-size: 0.82rem;
-}
-
-button:disabled {
-  cursor: wait;
-  opacity: 0.7;
-}
-
-.match-controls button:disabled,
-#addEvent:disabled {
-  cursor: not-allowed;
-  opacity: 0.42;
-  filter: grayscale(0.9);
-  box-shadow: none;
-}
-
-main {
-  width: min(1280px, calc(100% - 28px));
-  margin: 0 auto 42px;
-}
-
-.hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  min-height: 250px;
-  padding: 42px 0 34px;
-  color: #fff;
-  border-bottom: 1px solid rgba(155, 128, 54, 0.35);
-}
-
-.hero h1 {
-  margin: 0;
-  font-family: var(--condensed);
-  font-size: clamp(3rem, 9vw, 6.5rem);
-  line-height: 0.86;
-  letter-spacing: 0;
-  color: #fff;
-  text-transform: uppercase;
-}
-
-.hero p {
-  max-width: 650px;
-  color: var(--gold-soft);
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.eyebrow {
-  margin: 0 0 10px;
-  color: var(--gold-soft);
-  font-family: var(--condensed);
-  font-weight: 900;
-  font-size: 1.05rem;
-  text-transform: uppercase;
-}
-
-.goose {
-  width: min(28vw, 230px);
-  min-width: 138px;
-  object-fit: contain;
-  padding: 0;
-  background: transparent;
-  border: 0;
-}
-
-.view {
-  display: none;
-}
-
-.view.active {
-  display: block;
-}
-
-.admin-only[hidden] {
-  display: none !important;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 330px 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.panel {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 0;
-  padding: 20px;
-  box-shadow: 0 18px 42px rgba(0,0,0,0.1);
-}
-
-.view > .panel,
-.data-layout .panel,
-.event-panel,
-.live-hub {
-  background: #fff;
-}
-
-#data .data-layout .panel {
-  color: #fff;
-  background: var(--black);
-  border-color: rgba(155, 128, 54, 0.55);
-}
-
-#data .data-layout .panel h2,
-#data .data-layout .panel label {
-  color: #fff;
-}
-
-#data .data-layout .panel select {
-  color: #111;
-  background: #fff;
-}
-
-#data > .panel:first-child {
-  color: #fff;
-  background: #050505;
-  border-color: rgba(155,128,54,0.55);
-}
-
-#data > .panel:first-child h2,
-#data > .panel:first-child p,
-#data > .panel:first-child label {
-  color: #fff;
-  font-weight: 900;
-}
-
-#data > .panel:first-child .section-head p {
-  color: #f2e7c3;
-  font-weight: 800;
-}
-
-#data > .panel:first-child select {
-  color: #111;
-  background: #fff;
-  font-weight: 900;
-}
-
-.login-gate {
-  max-width: 640px;
-  margin: 0 auto;
-}
-
-.login-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 12px;
-  align-items: end;
-}
-
-.login-error {
-  color: var(--red);
-  font-weight: 800;
-}
-
-.compact {
-  position: sticky;
-  top: 94px;
-}
-
-h2,
-h3 {
-  margin: 0 0 12px;
-  font-family: var(--condensed);
-  font-weight: 900;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-}
-
-h2 {
-  font-size: 1.25rem;
-  color: #111;
-}
-
-h3 {
-  font-size: 1rem;
-  color: #111;
-}
-
-label {
-  display: grid;
-  gap: 7px;
-  margin: 0 0 12px;
-  color: #333;
-  font-family: var(--condensed);
-  font-weight: 900;
-  font-size: 0.88rem;
-  text-transform: uppercase;
-}
-
-.inline-label {
-  min-width: 220px;
-  margin: 0;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  border: 1px solid #cfcfcf;
-  border-radius: 0;
-  padding: 10px 11px;
-  background: var(--white);
-  color: var(--ink);
-}
-
-textarea {
-  resize: vertical;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.section-head p,
-.section-head span {
-  margin: 0;
-  color: var(--muted);
-}
-
-.match-card {
-  padding: 12px;
-  margin: 12px 0;
-  border-left: 5px solid var(--gold);
-  background: #f7f4e9;
-}
-
-.pitch-wrap {
-  display: grid;
-  grid-template-columns: minmax(420px, 1fr) 300px;
-  gap: 16px;
-  align-items: stretch;
-  margin-top: 14px;
-}
-
-.pitch {
-  position: relative;
-  min-height: 640px;
-  overflow: hidden;
-  border: 3px solid #f4f4f4;
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 100%),
-    repeating-linear-gradient(0deg, var(--grass), var(--grass) 76px, var(--grass-dark) 76px, var(--grass-dark) 152px);
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55);
-}
-
-.mini-pitch {
-  min-height: 420px;
-  margin: 12px 0 16px;
-}
-
-.mini-pitch .player-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.mini-pitch .photo-dot {
-  display: grid;
-  justify-items: center;
-  gap: 1px;
-  width: 86px;
-  min-height: 86px;
-  padding: 0;
-  border: 0;
-  color: #fff;
-  background: transparent;
-  box-shadow: none;
-}
-
-.mini-pitch .player-dot.photo-dot {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.mini-pitch .photo-dot::before {
-  content: attr(data-initials);
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border: 0;
-  border-radius: 50%;
-  background: #050505;
-  color: var(--gold-soft);
-  font-family: var(--condensed);
-  font-size: 1rem;
-}
-
-.mini-pitch .photo-dot img {
-  width: 54px;
-  height: 54px;
-  border: 0;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.mini-pitch .photo-dot:has(img)::before {
-  display: none;
-}
-
-.mini-pitch .photo-dot small {
-  max-width: 86px;
-  padding: 1px 5px;
-  color: #fff;
-  background: rgba(0,0,0,0.62);
-  font-size: 0.64rem;
-  line-height: 1.05;
-  text-align: center;
-}
-
-.pitch::before {
-  content: "";
-  position: absolute;
-  inset: 28px;
-  border: 2px solid rgba(255,255,255,0.72);
-  border-radius: 4px;
-}
-
-.pitch-line,
-.pitch-box,
-.center-circle {
-  position: absolute;
-  pointer-events: none;
-  border-color: rgba(255,255,255,0.72);
-}
-
-.halfway {
-  top: 50%;
-  left: 28px;
-  right: 28px;
-  border-top: 2px solid rgba(255,255,255,0.72);
-}
-
-.center-circle {
-  top: calc(50% - 58px);
-  left: calc(50% - 58px);
-  width: 116px;
-  height: 116px;
-  border: 2px solid rgba(255,255,255,0.72);
-  border-radius: 50%;
-}
-
-.pitch-box {
-  left: 28%;
-  width: 44%;
-  height: 88px;
-  border: 2px solid rgba(255,255,255,0.72);
-}
-
-.top-box {
-  top: 28px;
-  border-top: 0;
-}
-
-.bottom-box {
-  bottom: 28px;
-  border-bottom: 0;
-}
-
-.player-dot {
-  position: absolute;
-  z-index: 2;
-  transform: translate(-50%, -50%);
-  width: 96px;
-  min-height: 42px;
-  padding: 4px 8px;
-  border: 2px solid #fff;
-  color: #fff;
-  background: var(--black);
-  font-weight: 800;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.22);
-}
-
-.player-dot.empty {
-  width: 42px;
-  border-style: dashed;
-  color: rgba(255,255,255,0.85);
-  background: rgba(0,0,0,0.22);
-  box-shadow: none;
-}
-
-.player-dot.selected {
-  outline: 4px solid var(--gold);
-  outline-offset: 3px;
-}
-
-.bench-strip {
-  position: absolute;
-  left: 28px;
-  right: 28px;
-  bottom: 18px;
-  z-index: 3;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 8px;
-  color: #fff;
-  background: rgba(0,0,0,0.62);
-}
-
-.bench-strip span {
-  padding: 5px 7px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.14);
-  font-size: 0.82rem;
-}
-
-.player-picker {
-  min-height: 640px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fafafa;
-}
-
-.player-search {
-  width: 100%;
-  margin: 4px 0 12px;
-  padding: 11px 12px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  color: var(--ink);
-  background: #fff;
-  font-weight: 800;
-}
-
-.player-search:focus {
-  outline: 2px solid var(--gold);
-  outline-offset: 1px;
-}
-
-.player-grid {
-  display: grid;
-  gap: 8px;
-  max-height: 570px;
-  overflow: auto;
-  padding-right: 4px;
-}
-
-.player-card {
-  display: block;
-  width: 100%;
-  min-height: 58px;
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  text-align: left;
-  color: var(--ink);
-  background: #fff;
-}
-
-.player-card strong,
-.player-card span {
-  display: block;
-}
-
-.player-card strong {
-  overflow-wrap: anywhere;
-  line-height: 1.08;
-}
-
-.player-card span {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.player-levels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.player-levels em {
-  display: inline-flex;
-  align-items: center;
-  min-height: 20px;
-  padding: 3px 6px;
-  color: #111;
-  background: #f2ead1;
-  border: 1px solid rgba(155,128,54,0.55);
-  font-size: 0.68rem;
-  font-style: normal;
-  font-weight: 900;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.player-card.is-starter {
-  border-color: var(--red);
-  background: #fff3f4;
-}
-
-.player-card.is-bench {
-  border-color: var(--gold);
-  background: #fbf8ed;
-}
-
-.event-panel {
-  margin-top: 16px;
-}
-
-.event-panel .section-head h2,
-.event-panel .event-log h3 {
-  color: var(--gold);
-}
-
-.event-panel .section-head p {
-  color: var(--white);
-}
-
-.event-panel label {
-  color: var(--gold);
-  font-weight: 900;
-}
-
-.event-panel select {
-  color: #111;
-  background: #fff;
-  font-weight: 800;
-}
-
-.match-controls {
-  margin-bottom: 16px;
-}
-
-.event-form {
-  display: grid;
-  grid-template-columns: 170px 145px 1fr 1fr 1fr 1fr 120px;
-  gap: 12px;
-  align-items: end;
-}
-
-.event-log {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-
-.delete-event,
-.danger {
-  color: #fff;
-  background: #b91c1c;
-}
-
-.delegate-actions {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.delegate-actions button {
-  width: 100%;
-  min-height: 46px;
-}
-
-#delegateSetup > .compact {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-#delegateSetup > .lineup-panel {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.site-footer {
-  width: min(100% - 36px, 1280px);
-  margin: 34px auto 0;
-  padding: 16px 0 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: rgba(255,255,255,0.62);
-  border-top: 1px solid rgba(155,128,54,0.28);
-}
-
-.site-footer img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  opacity: 0.78;
-  filter: drop-shadow(0 0 10px rgba(155,128,54,0.22));
-}
-
-.site-footer span {
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.site-footer a {
-  color: var(--gold-soft);
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.match-admin-row {
-  cursor: pointer;
-}
-
-.match-admin-row:hover td {
-  background: rgba(215,189,101,0.18) !important;
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  background: rgba(0,0,0,0.72);
-}
-
-.modal-backdrop[hidden] {
-  display: none !important;
-}
-
-.modal-card {
-  width: min(92vw, 560px);
-  padding: 22px;
-  color: #fff;
-  background: #070707;
-  border: 1px solid rgba(155,128,54,0.7);
-  box-shadow: 0 26px 80px rgba(0,0,0,0.58);
-}
-
-.modal-close {
-  float: right;
-  min-height: 34px;
-  padding: 7px 10px;
-  color: #fff;
-  background: #151515;
-  border-color: rgba(155,128,54,0.55);
-}
-
-.modal-kicker,
-.modal-note {
-  color: #d7bd65;
-  font-weight: 800;
-}
-
-.match-meta-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 18px 0;
-}
-
-.match-meta-list div {
-  padding: 12px;
-  background: #111;
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-.match-meta-list dt {
-  color: #d7bd65;
-  font-family: var(--condensed);
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.match-meta-list dd {
-  margin: 4px 0 0;
-  color: #fff;
-  font-weight: 800;
-}
-
-.ghost {
-  margin-bottom: 12px;
-  color: var(--black);
-  background: #ececec;
-}
-
-.sub-only,
-.assist-only {
-  display: none;
-}
-
-.sub-only.visible,
-.assist-only.visible {
-  display: grid;
-}
-
-.hidden {
-  display: none;
-}
-
-.score-mini {
-  padding: 8px 14px;
-  border-radius: 0;
-  color: var(--white);
-  background: var(--black);
-  font-size: 1.4rem;
-  font-weight: 900;
-}
-
-.data-layout {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.data-layout.single {
-  grid-template-columns: 1fr;
-}
-
-.data-cards {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(104px, 1fr));
-  gap: 10px;
-}
-
-.stat-card {
-  display: flex;
-  min-height: 98px;
-  padding: 14px 12px;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: #111;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-}
-
-.stat-card span,
-.stat-card strong {
-  display: block;
-}
-
-.stat-card span {
-  color: #fff;
-  font-size: 0.86rem;
-  font-weight: 900;
-  line-height: 1.15;
-  min-height: 34px;
-}
-
-.stat-card strong {
-  margin-top: 6px;
-  font-family: var(--condensed);
-  font-size: 1.7rem;
-  line-height: 1;
-  text-align: center;
-}
-
-.result-win,
-.stat-card.goals-for {
-  border-color: #15803d;
-  background: #062f18;
-}
-
-.result-draw {
-  border-color: #ca8a04;
-  background: #332700;
-}
-
-.result-loss,
-.stat-card.goals-against {
-  border-color: #dc2626;
-  background: #3a080b;
-}
-
-.result-win strong,
-.stat-card.goals-for strong,
-.badge.win,
-.score .goals-for {
-  color: #15803d;
-}
-
-.result-draw strong,
-.badge.draw {
-  color: #a16207;
-}
-
-.result-loss strong,
-.stat-card.goals-against strong,
-.badge.loss,
-.score .goals-against {
-  color: #dc2626;
-}
-
-.competition-title {
-  margin: 24px 0 0;
-  padding: 10px 12px;
-  border-left: 5px solid var(--gold);
-  color: var(--gold);
-  background: var(--black);
-  font-weight: 900;
-  font-size: 1.18rem;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  min-height: 28px;
-  border-radius: 0;
-  font-weight: 900;
-  background: #f3f3f3;
-}
-
-.table-wrap {
-  overflow: auto;
-  background: var(--black);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 560px;
-  background: #fff;
-}
-
-th,
-td {
-  padding: 10px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.16);
-  text-align: center;
-  background: #fff;
-  color: #000;
-}
-
-th {
-  color: #fff;
-  background: var(--black);
-  border-bottom: 1px solid var(--gold);
-  font-family: var(--condensed);
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.score .goals-for,
-.score .goals-against {
-  background: transparent;
-}
-
-.teams-panel,
-.player-detail {
-  color: #fff;
-  background: var(--black);
-  border-color: rgba(155, 128, 54, 0.55);
-}
-
-#teams > .panel,
-#teams .teams-panel,
-#teams .player-detail {
-  color: #fff;
-  background: var(--black);
-  border-color: rgba(155, 128, 54, 0.55);
-}
-
-.teams-panel h2,
-.teams-panel p,
-.teams-panel label {
-  color: #fff;
-}
-
-.teams-panel .section-head p {
-  color: #f2e7c3;
-}
-
-.teams-panel label {
-  color: var(--gold);
-}
-
-.player-detail h2,
-.player-detail h3 {
-  color: #fff;
-}
-
-.player-detail table {
-  color: #fff;
-  background: var(--black);
-}
-
-.player-detail td {
-  color: #fff;
-  background: var(--black);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
-}
-
-.player-detail th {
-  color: #fff;
-  background: var(--black);
-  border-bottom: 1px solid var(--gold);
-}
-
-.teams-panel select {
-  color: #111;
-  background: #fff;
-}
-
-.teams-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
-  gap: 10px;
-}
-
-.team-player-card {
-  display: grid;
-  grid-template-columns: 54px 1fr;
-  gap: 10px;
-  min-height: 88px;
-  padding: 10px;
-  color: #fff;
-  background: #121212;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  align-items: center;
-  text-align: left;
-  cursor: pointer;
-}
-
-.team-player-card.active {
-  border-color: var(--gold);
-  background: rgba(155, 128, 54, 0.2);
-}
-
-.team-player-card img,
-.player-photo-fallback {
-  width: 54px;
-  height: 68px;
-  object-fit: cover;
-  background: #1d1d1d;
-}
-
-.team-player-card strong,
-.team-player-card small {
-  display: block;
-}
-
-.team-player-card strong {
-  font-size: 0.95rem;
-  line-height: 1.1;
-}
-
-.team-player-card small {
-  margin-top: 4px;
-  color: var(--gold-soft);
-  font-size: 0.75rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.player-photo-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--gold);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-family: var(--condensed);
-  font-size: 1.4rem;
-  font-weight: 900;
-}
-
-.player-photo-fallback.large,
-.player-profile img {
-  width: 92px;
-  height: 112px;
-  object-fit: cover;
-}
-
-.player-profile {
-  display: flex;
-  gap: 18px;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
-.player-profile h2 {
-  margin: 0;
-  font-family: var(--condensed);
-  font-size: clamp(2rem, 5vw, 4.2rem);
-  line-height: 0.9;
-  text-transform: uppercase;
-}
-
-.player-profile span {
-  color: var(--gold);
-  font-weight: 900;
-}
-
-.player-stat-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.player-stat-row article {
-  padding: 14px;
-  border: 1px solid rgba(155, 128, 54, 0.55);
-  background: #111;
-}
-
-.player-stat-row strong,
-.player-stat-row span {
-  display: block;
-}
-
-.player-stat-row strong {
-  color: var(--gold);
-  font-family: var(--condensed);
-  font-size: 1.8rem;
-}
-
-.player-stat-row span {
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.live-board {
-  display: block;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 30px;
-  color: var(--white);
-  background: var(--black);
-  border-radius: 0;
-  border: 1px solid rgba(155,128,54,0.48);
-  border-bottom: 5px solid var(--gold);
-}
-
-.live-hub {
-  margin-bottom: 16px;
-}
-
-.live-hub .section-head {
-  margin: -18px -18px 16px;
-  padding: 18px;
-  color: #fff;
-  background: linear-gradient(135deg, #050505, #111 58%, var(--gold-dark));
-  border-radius: 0;
-}
-
-.live-hub .section-head h2 {
-  color: #fff;
-}
-
-.live-hub .section-head p {
-  color: #f2e7c3;
-}
-
-.live-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-.live-card {
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-left: 5px solid var(--gold);
-  border-radius: 0;
-  background: #fff;
-  cursor: pointer;
-  box-shadow: 0 14px 32px rgba(0,0,0,0.06);
-}
-
-.live-card strong {
-  font-size: 1.15rem;
-}
-
-.live-card span,
-.live-card small {
-  color: var(--muted);
-}
-
-.live-detail-grid {
-  display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chip-list span {
-  padding: 6px 9px;
-  border-radius: 0;
-  background: #f3f3f3;
-}
-
-.live-main h2 {
-  margin: 0;
-  text-align: center;
-  font-size: clamp(1.8rem, 5vw, 3.7rem);
-  color: var(--gold-soft);
-}
-
-.live-main p {
-  color: #fff;
-}
-
-.scoreline {
-  display: flex;
-  justify-content: center;
-  margin: 22px 0;
-}
-
-.scoreline strong {
-  color: var(--gold-soft);
-  font-size: clamp(3rem, 10vw, 7rem);
-  line-height: 0.85;
-}
-
-.live-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.live-meta span {
-  padding: 8px 12px;
-  border-radius: 0;
-  background: #262626;
-  color: #fff;
-}
-
-.timeline {
-  display: grid;
-  gap: 8px;
-}
-
-.live-player-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-  gap: 10px;
-  margin: 14px 0 18px;
-}
-
-.live-player-card {
-  display: grid;
-  gap: 7px;
-  justify-items: center;
-  text-align: center;
-}
-
-.live-player-card strong {
-  font-size: 0.75rem;
-  line-height: 1.15;
-}
-
-.player-photo {
-  width: 74px;
-  height: 74px;
-  border: 2px solid var(--gold);
-  border-radius: 50%;
-  background: #0b0b0b;
-  overflow: hidden;
-  position: relative;
-}
-
-.player-photo::after {
-  content: attr(data-initials);
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--gold-soft);
-  font-family: var(--condensed);
-  font-size: 1.2rem;
-  font-weight: 900;
-}
-
-.player-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: relative;
-  z-index: 1;
-}
-
-.timeline-item {
-  display: grid;
-  grid-template-columns: 120px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 11px;
-  border-bottom: 1px solid var(--line);
-}
-
-.timeline-item strong {
-  color: var(--gold-dark);
-}
-
-.timeline-item.home-event {
-  justify-self: start;
-  width: min(86%, 760px);
-  border-left: 5px solid var(--gold);
-  background: #fff;
-}
-
-.timeline-item.away-event {
-  justify-self: end;
-  width: min(86%, 760px);
-  border-right: 5px solid #111;
-  background: #f7f7f7;
-  text-align: right;
-}
-
-.timeline-item.away-event {
-  grid-template-columns: auto 1fr 120px;
-}
-
-.timeline-item.away-event > strong {
-  order: 3;
-}
-
-.timeline-item.away-event > span {
-  order: 2;
-}
-
-.timeline-item.away-event > button {
-  order: 1;
-}
-
-.timeline-item.system-event {
-  justify-self: stretch;
-  grid-template-columns: 1fr;
-  border-left: 0;
-  color: #fff;
-  background: var(--red);
-  text-align: center;
-}
-
-.timeline-item.system-event > strong {
-  display: none;
-}
-
-.event-start,
-.goal-label {
-  color: var(--red);
-  font-weight: 900;
-}
-
-.timeline-item.system-event .event-start {
-  color: #fff;
-  text-transform: uppercase;
-}
-
-.export-card {
-  max-width: 760px;
-}
-
-.source-path {
-  padding: 10px 12px;
-  color: #333;
-  background: #f3f3f3;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  word-break: break-word;
-}
-
-.download {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 10px;
-  color: var(--black);
-  background: #e8debf;
-}
-
-.excel-sync {
-  border-color: rgba(132, 99, 28, 0.26);
-}
-
-.sync-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.sync-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 8px 0 12px;
-}
-
-.sync-options label {
-  min-width: 220px;
-  color: var(--gold);
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.sync-options select {
-  margin-top: 6px;
-}
-
-.sync-actions input[type="file"] {
-  flex: 1 1 260px;
-  border: 1px solid rgba(17, 17, 17, 0.14);
-  border-radius: 8px;
-  padding: 11px;
-  background: #fff;
-  color: #111;
-}
-
-.sync-status {
-  margin: 10px 0 0;
-  color: #5f4510;
-  font-weight: 800;
-}
-
-.manual-match-form {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(130px, 1fr));
-  gap: 12px;
-  align-items: end;
-}
-
-.manual-match-form label {
-  color: var(--gold);
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.manual-match-form input,
-.manual-match-form select {
-  margin-top: 6px;
-  width: 100%;
-}
-
-.manual-match-form button {
-  min-height: 44px;
-}
-
-@media (max-width: 1050px) {
-  .data-cards {
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
-  }
-
-  .player-stat-row {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .manual-match-form {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
-  }
-
-  .layout,
-  .pitch-wrap,
-  .data-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .compact {
-    position: static;
-  }
-
-  #delegateSetup > .compact,
-  #delegateSetup > .lineup-panel {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .player-picker,
-  .pitch {
-    min-height: 520px;
-  }
-}
-
-@media (max-width: 620px) {
-  .manual-match-form {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 900px) {
-  main {
-    width: min(100% - 20px, 1280px);
-  }
-
-  .topbar,
-  .hero,
-  .section-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .topbar {
-    position: static;
-    padding: 12px;
-  }
-
-  .brand {
-    width: 100%;
-  }
-
-  .auth-box {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .hero {
-    min-height: 180px;
-    padding: 28px 0 18px;
-  }
-
-  .hero h1 {
-    font-size: clamp(2.4rem, 16vw, 4rem);
-  }
-
-  .goose {
-    align-self: flex-end;
-    width: 150px;
-  }
-
-  .live-board {
-    grid-template-columns: 1fr;
-    padding: 20px;
-  }
-
-  .login-form,
-  .live-detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .event-form {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .scoreline {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 560px) {
-  main {
-    width: min(100% - 14px, 1220px);
-    margin-bottom: 24px;
-  }
-
-  .tabs,
-  .auth-box,
-  .match-controls,
-  .lineup-tools,
-  .event-form {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .panel {
-    padding: 14px;
-  }
-
-  .data-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .teams-grid,
-  .player-stat-row {
-    grid-template-columns: 1fr;
-  }
-
-  .player-profile {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .live-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .table-wrap {
-    margin: 0 -6px;
-    padding: 0 6px;
-  }
-
-  table {
-    min-width: 520px;
-    font-size: 0.86rem;
-  }
-
-  .tab,
-  .auth-box button,
-  .match-controls button,
-  .lineup-tools button {
-    width: 100%;
-  }
-
-  .pitch {
-    min-height: 440px;
-  }
-
-  .player-picker {
-    min-height: auto;
-  }
-
-  .player-dot {
-    width: 72px;
-    min-height: 36px;
-    font-size: 0.7rem;
-  }
+import http from "node:http";
+import { copyFile, readFile, writeFile, mkdir, stat } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = Number(process.env.PORT || 4173);
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+const DB_PATH = path.join(DATA_DIR, "db.json");
+const BACKUP_DIR = path.join(DATA_DIR, "backups");
+const OUTPUT_DIR = process.env.OUTPUT_DIR || path.join(__dirname, "outputs");
+const SOURCE_DIR =
+  process.env.CASA_PIA_SOURCE_DIR ||
+  "C:/Users/catas/OneDrive - Universidade do Algarve/Ambiente de Trabalho/CASA PIA AC";
+const SOURCE_XLSX =
+  process.env.CASA_PIA_XLSX || path.join(SOURCE_DIR, "Casa pia.xlsx");
+const DEFAULT_SOURCE_XLSX_URL =
+  "https://docs.google.com/spreadsheets/d/1nQnhwHzXcjsOqRvEyl19ipSWQfxIaJ5O/export?format=xlsx";
+const SOURCE_XLSX_URL = process.env.CASA_PIA_XLSX_URL || DEFAULT_SOURCE_XLSX_URL;
+const AUTO_SYNC_MINUTES = Number(process.env.CASA_PIA_AUTO_SYNC_MINUTES || 0);
+const ZEROZERO_AUTO_SYNC_MINUTES = Number(process.env.ZEROZERO_AUTO_SYNC_MINUTES || 0);
+const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024/2025";
+const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
+let lastSync = null;
+let lastZerozeroSync = null;
+
+async function spreadsheetTool() {
+  try {
+    return await import("@oai/artifact-tool");
+  } catch {
+    return null;
+  }
+}
+
+async function xlsxTool() {
+  try {
+    return await import("xlsx");
+  } catch {
+    return null;
+  }
+}
+
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+
+async function exists(file) {
+  try {
+    await stat(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function cleanLevel(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (text.includes("13")) return "Sub13";
+  if (text.includes("15")) return "Sub15";
+  if (text.includes("17")) return "Sub17";
+  if (text.includes("19")) return "Sub19";
+  if (text.includes("senior")) return "Seniores";
+  return String(value || "").trim();
+}
+
+function pick(record, keys) {
+  for (const key of keys) {
+    if (record[key] !== undefined) return record[key];
+  }
+  return null;
+}
+
+function playerId(level, name) {
+  return `${level}_${String(name)
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")}`;
+}
+
+function playerKey(name) {
+  return String(name || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function slugKey(value) {
+  return playerKey(value).replace(/\s+/g, "_");
+}
 
-  .timeline-item {
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-.scoreline strong {
-    font-size: clamp(3rem, 22vw, 5rem);
-  }
-}
-
-body {
-  color: #f7f5ee;
-  background:
-    radial-gradient(circle at 82% 10%, rgba(155, 128, 54, 0.2), transparent 28rem),
-    linear-gradient(135deg, rgba(215, 25, 42, 0.12) 0 1px, transparent 1px 42px),
-    linear-gradient(180deg, #000 0%, #030303 38rem, #0d0d0d 100%);
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255,255,255,0.018) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: linear-gradient(180deg, #000, transparent 82%);
-}
-
-.topbar {
-  min-height: 88px;
-  background:
-    linear-gradient(90deg, rgba(215,25,42,0.16), transparent 24%),
-    #000;
-  border-bottom: 2px solid var(--gold);
-  box-shadow: 0 18px 48px rgba(0,0,0,0.55);
-}
-
-.brand {
-  min-width: 230px;
-}
-
-.brand strong {
-  font-size: 1.12rem;
-  color: #fff;
-}
-
-.brand span {
-  color: var(--gold-soft);
-  font-weight: 900;
-}
-
-.crest {
-  filter: drop-shadow(0 0 12px rgba(155,128,54,0.55));
-}
-
-.tabs {
-  justify-content: center;
-  padding: 4px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(155,128,54,0.28);
-}
-
-.tab {
-  color: #fff;
-  background: #111;
-  border-color: rgba(255,255,255,0.08);
-}
-
-.tab.active {
-  color: #050505;
-  background: linear-gradient(135deg, #d2b75f, #92752d);
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.22), 0 0 22px rgba(155,128,54,0.32);
-}
-
-.auth-box button,
-.download,
-button {
-  border-radius: 0;
-}
-
-.primary,
-#loginSubmit {
-  color: #050505;
-  background: linear-gradient(135deg, #d7bd65, #967733);
-  border-color: #d7bd65;
-}
-
-.ghost,
-#logoutBtn,
-#loginOpen {
-  color: #fff;
-  background: #151515;
-  border-color: rgba(255,255,255,0.14);
-}
-
-.hero {
-  position: relative;
-  min-height: 300px;
-  padding-top: 58px;
-  border-bottom: 1px solid rgba(155,128,54,0.65);
-}
-
-.hero::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -2px;
-  height: 3px;
-  background: linear-gradient(90deg, var(--red), var(--gold), transparent);
-}
-
-.hero h1 {
-  text-shadow: 0 16px 38px rgba(0,0,0,0.7);
-}
-
-.hero p,
-.eyebrow {
-  color: #d7bd65;
-}
-
-.goose {
-  filter: drop-shadow(0 0 22px rgba(155,128,54,0.42));
-  opacity: 0.96;
-}
-
-.panel {
-  color: #fff;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)),
-    #070707;
-  border: 1px solid rgba(155,128,54,0.5);
-  box-shadow: 0 22px 52px rgba(0,0,0,0.36);
-}
-
-.view > .panel,
-.data-layout .panel,
-.event-panel,
-.live-hub,
-#data > .panel:first-child,
-#data .data-layout .panel {
-  color: #fff;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018)),
-    #050505;
-  border-color: rgba(155,128,54,0.55);
-}
-
-.panel h2,
-.panel h3,
-h2,
-h3,
-label {
-  color: #fff;
-}
-
-.section-head p,
-.section-head span {
-  color: #d8cfb1;
-}
-
-input,
-select,
-textarea {
-  color: #fff;
-  background: #0d0d0d;
-  border: 1px solid rgba(255,255,255,0.18);
-  outline: 1px solid transparent;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--gold-soft);
-  box-shadow: 0 0 0 3px rgba(155,128,54,0.18);
-}
-
-option {
-  color: #111;
-  background: #fff;
-}
-
-.match-card {
-  color: #fff;
-  background: linear-gradient(90deg, rgba(155,128,54,0.18), rgba(255,255,255,0.04));
-  border-left-color: var(--red);
-}
-
-.data-cards {
-  gap: 12px;
-}
-
-.stat-card {
-  min-height: 104px;
-  color: #fff;
-  background: #101010;
-  border: 1px solid rgba(255,255,255,0.16);
-  box-shadow: inset 0 3px 0 rgba(255,255,255,0.04);
-}
-
-.stat-card strong {
-  color: #fff;
-}
-
-.stat-card span {
-  color: #f1e7c7;
-}
-
-.stat-card.result-win,
-.stat-card.goals-for {
-  background: linear-gradient(180deg, #082717, #04160d);
-  border-color: #0f8f4e;
-}
-
-.stat-card.result-draw {
-  background: linear-gradient(180deg, #352a05, #171202);
-  border-color: #b58e17;
-}
-
-.stat-card.result-loss,
-.stat-card.goals-against {
-  background: linear-gradient(180deg, #3a0509, #180204);
-  border-color: #d7192a;
-}
-
-.competition-title {
-  color: var(--gold-soft);
-  border-left-color: var(--red);
-}
-
-table {
-  color: #111;
-  background: #fff;
-}
-
-thead th {
-  color: #fff;
-  background: #000;
-  border-bottom: 2px solid var(--gold);
-}
-
-tbody tr {
-  background: #fff;
-}
-
-tbody tr:hover {
-  background: #f8f1db;
-}
-
-.teams-grid .player-card,
-.player-card {
-  color: #fff;
-  background: #0b0b0b;
-  border-color: rgba(255,255,255,0.14);
-}
-
-.player-card.active,
-.teams-grid .player-card.active {
-  color: #fff;
-  background: linear-gradient(90deg, rgba(155,128,54,0.36), rgba(255,255,255,0.05));
-  border-color: var(--gold-soft);
-}
-
-.player-detail,
-#playerDetail {
-  color: #fff;
-  background: #050505;
-}
-
-.timeline-item {
-  color: #111;
-  border-left-color: var(--gold);
-}
-
-.timeline-item.major {
-  color: #fff;
-  background: var(--red);
-  border-left-color: var(--red);
-}
-
-.live-board {
-  border-color: rgba(155,128,54,0.72);
-  background: #050505;
-}
-
-.live-main,
-.live-side {
-  color: #fff;
-}
-
-@media (max-width: 900px) {
-  .tabs {
-    width: 100%;
-  }
-
-  .hero {
-    min-height: 230px;
-  }
-}
-
-/* Contrast and mobile pass */
-body {
-  background:
-    radial-gradient(circle at 78% 2%, rgba(155, 128, 54, 0.13), transparent 22rem),
-    linear-gradient(180deg, #000 0%, #050505 22rem, #111 100%);
-}
-
-.hero {
-  align-items: center;
-  min-height: 230px;
-  padding: 42px 0 28px;
-  background: linear-gradient(90deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.94) 55%, rgba(155,128,54,0.12) 100%);
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 2;
-}
-
-.hero h1 {
-  color: #fff;
-  text-shadow: 0 3px 0 #000, 0 18px 42px rgba(0,0,0,0.82);
-}
-
-.hero p,
-.eyebrow,
-#heroStatus {
-  color: #d9bd62;
-  text-shadow: 0 2px 12px #000;
-}
-
-.goose {
-  width: clamp(96px, 15vw, 160px);
-  min-width: 0;
-  max-height: 150px;
-  padding: 0;
-  background: transparent;
-  object-fit: contain;
-  mix-blend-mode: screen;
-  filter: sepia(0.2) saturate(1.05) drop-shadow(0 0 18px rgba(155,128,54,0.36));
-  opacity: 0.72;
-}
-
-.panel,
-.view > .panel,
-.data-layout .panel,
-.event-panel,
-.live-hub,
-#data > .panel:first-child,
-#data .data-layout .panel {
-  background: #070707;
-}
-
-.section-head {
-  align-items: end;
-}
-
-.section-head p,
-.section-head span {
-  color: #e7ddbd;
-}
-
-.live-card {
-  color: #fff;
-  background: #101010;
-  border-color: rgba(155,128,54,0.42);
-}
-
-.live-card strong {
-  color: #fff;
-}
-
-.live-card span,
-.live-card small {
-  color: #e7ddbd;
-}
-
-.chip-list span {
-  color: #111;
-}
-
-@media (max-width: 900px) {
-  main {
-    width: calc(100% - 18px);
-  }
-
-  .topbar {
-    gap: 12px;
-  }
-
-  .tabs {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .tab {
-    min-height: 42px;
-    padding: 0 8px;
-    font-size: 0.86rem;
-  }
-
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    min-height: 170px;
-    padding: 24px 0 18px;
-  }
-
-  .hero h1 {
-    font-size: clamp(2.8rem, 18vw, 5rem);
-  }
-
-  .goose {
-    width: 86px;
-    opacity: 0.48;
-  }
-
-  .section-head {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .inline-label {
-    width: 100%;
-    min-width: 0;
-  }
-
-  input,
-  select,
-  textarea {
-    min-height: 44px;
-    font-size: 16px;
-  }
-
-  .pitch-wrap {
-    grid-template-columns: 1fr;
-  }
-
-  .pitch {
-    min-height: min(560px, 118vw);
-  }
-}
-
-@media (max-width: 560px) {
-  .topbar {
-    padding: 10px;
-  }
-
-  .brand {
-    min-width: 0;
-  }
-
-  .brand strong {
-    font-size: 0.95rem;
-  }
-
-  .brand span,
-  .auth-box span {
-    font-size: 0.72rem;
-  }
-
-  .crest {
-    width: 36px;
-    height: 42px;
-  }
-
-  .tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .auth-box {
-    display: grid;
-    grid-template-columns: 1fr auto;
-  }
-
-  .hero {
-    grid-template-columns: 1fr;
-    min-height: 145px;
-  }
-
-  .goose {
-    display: none;
-  }
-
-  .hero h1 {
-    font-size: clamp(2.7rem, 19vw, 4.2rem);
-  }
-
-  .eyebrow,
-  #heroStatus {
-    font-size: 0.78rem;
-  }
-
-  .panel {
-    padding: 12px;
-  }
-
-  .data-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .stat-card {
-    min-height: 86px;
-    padding: 10px;
-  }
-
-  .stat-card strong {
-    font-size: 1.6rem;
-  }
-
-  .manual-match-form,
-  .event-form,
-  .login-form {
-    grid-template-columns: 1fr;
-  }
-
-  .teams-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .team-player-card {
-    grid-template-columns: 48px 1fr;
-    min-height: 78px;
-  }
-
-  .team-player-card img,
-  .player-photo-fallback {
-    width: 48px;
-    height: 58px;
-  }
-
-  .live-card {
-    padding: 12px;
-  }
-
-  .live-main h2 {
-    font-size: clamp(1.45rem, 10vw, 2.4rem);
-  }
-
-  .scoreline strong {
-    font-size: clamp(3rem, 20vw, 5rem);
-  }
-}
-
-/* Final CPAC polish */
-.hero {
-  min-height: 178px;
-  padding: 30px 0 24px;
-}
-
-.goose {
-  position: absolute;
-  top: 22px;
-  right: 0;
-  width: 74px;
-  height: 74px;
-  max-height: none;
-  padding: 0;
-  background: transparent;
-  mix-blend-mode: normal;
-  opacity: 0.9;
-  filter: drop-shadow(0 0 14px rgba(155,128,54,0.5));
-}
-
-#data table {
-  min-width: 720px;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid rgba(155,128,54,0.45);
-}
-
-#data thead th {
-  height: 46px;
-  color: #fff;
-  background: #000;
-  border-bottom: 2px solid var(--gold);
-  font-size: 1rem;
-}
-
-#data tbody td {
-  height: 48px;
-  color: #0a0a0a;
-  background: #fff;
-  border-bottom: 1px solid #d8d8d8;
-  font-weight: 650;
-}
-
-#data tbody td:first-child,
-#data thead th:first-child {
-  width: 82px;
-  text-align: center;
-}
-
-#data tbody tr:nth-child(even) td {
-  background: #f7f7f2;
-}
-
-#data tbody tr:hover td {
-  background: #f0e4bd;
-}
-
-#data .competition-title {
-  margin-top: 22px;
-  padding: 14px 16px;
-  color: var(--gold-soft);
-  background: #000;
-  border-left: 6px solid var(--gold);
-  border-bottom: 1px solid rgba(155,128,54,0.45);
-}
-
-#delegate .panel,
-#delegate .compact,
-#delegate .event-panel {
-  color: #fff;
-  background: #050505;
-}
-
-#delegate label,
-#delegate h2,
-#delegate h3,
-#delegate .section-head p {
-  color: #f5e5b0;
-}
-
-#delegate input,
-#delegate select,
-#delegate textarea {
-  color: #fff;
-  background: #111;
-  border-color: rgba(255,255,255,0.28);
-}
-
-#delegate option {
-  color: #111;
-  background: #fff;
-}
-
-#delegate .player-card {
-  color: #fff;
-  background: #111;
-  border-color: rgba(255,255,255,0.2);
-}
-
-#delegate .player-card strong {
-  color: #fff;
-  text-shadow: 0 1px 0 #000;
-}
-
-#delegate .player-card span {
-  color: #f7df8a;
-  font-weight: 900;
-}
-
-#delegate .player-card.is-starter {
-  color: #fff;
-  background: #4d070d;
-  border-color: #df1f2d;
-  box-shadow: inset 4px 0 0 #df1f2d;
-}
-
-#delegate .player-card.is-bench {
-  color: #fff;
-  background: #3a2d08;
-  border-color: #b79a45;
-  box-shadow: inset 4px 0 0 #b79a45;
-}
-
-#delegate .player-card.is-starter span,
-#delegate .player-card.is-bench span {
-  color: #fff;
-}
-
-#delegate .player-levels em {
-  color: #000;
-  background: #d5bd63;
-  border-color: #f2df98;
-}
-
-.event-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-#toggleReportView {
-  margin: 0;
-  color: #fff;
-  background: #171717;
-  border-color: rgba(155,128,54,0.55);
-}
-
-#delegateSetup[hidden] {
-  display: none !important;
-}
-
-@media (max-width: 900px) {
-  .goose {
-    top: 16px;
-    right: 2px;
-    width: 52px;
-    height: 52px;
-    display: block;
-  }
-
-  .hero {
-    min-height: 150px;
-    padding-right: 58px;
-  }
-
-  .event-head-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-@media (max-width: 560px) {
-  .goose {
-    display: block;
-    width: 42px;
-    height: 42px;
-    opacity: 0.82;
-  }
-
-  .hero {
-    min-height: 128px;
-    padding-right: 48px;
-  }
-
-  #data table {
-    min-width: 620px;
-  }
-
-  #data thead th,
-  #data tbody td {
-    height: 42px;
-    padding: 8px;
-    font-size: 0.86rem;
-  }
-}
+function numberValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function buildPlayerHistory(values) {
+  const headers = (values[0] || []).map((header) => String(header || "").trim());
+  const byPlayer = new Map();
+  for (const row of values.slice(1)) {
+    const record = Object.fromEntries(headers.map((header, index) => [header || `col${index}`, row[index] ?? ""]));
+    const name = String(pick(record, ["Jogadoras", "Jogadora", "Nome"]) || "").trim();
+    const opponent = String(pick(record, ["Equipa Adversária", "Equipa Adversaria", "Adversário", "Adversario"]) || "").trim();
+    if (!name || !opponent) continue;
+    const item = {
+      opponent,
+      season: String(pick(record, ["Época", "Epoca", "Temporada", "Season"]) || "").trim(),
+      role: String(pick(record, ["Papel", "Função", "Funcao"]) || "").trim() || "-",
+      minutes: pick(record, ["Tempo de Jogo (min)", "Minutos", "Tempo de Jogo"]) ?? "",
+      yellows: numberValue(pick(record, ["Cartões Amarelos", "Cartoes Amarelos", "Amarelos"])),
+      reds: numberValue(pick(record, ["Cartões Vermelhos", "Cartoes Vermelhos", "Vermelhos"])),
+      goals: numberValue(pick(record, ["Golos", "Golos Marcados"])),
+      assists: numberValue(pick(record, ["Assistências", "Assistencias", "Assist."])),
+    };
+    const key = playerKey(name);
+    if (!byPlayer.has(key)) byPlayer.set(key, []);
+    byPlayer.get(key).push(item);
+  }
+  return byPlayer;
+}
+
+async function sheetValues(workbook, sheetName) {
+  const sheet = workbook.worksheets.getItem(sheetName);
+  return sheet.getUsedRange(true).values;
+}
+
+async function importWorkbook() {
+  const buffer = await readFile(SOURCE_XLSX);
+  return importWorkbookBuffer(buffer, SOURCE_XLSX);
+}
+
+async function importWorkbookLegacy() {
+  const tool = await spreadsheetTool();
+  if (!tool) {
+    throw new Error("Importação XLSX indisponível neste ambiente. Usa um data/db.json já criado ou instala a ferramenta de spreadsheet.");
+  }
+  const { FileBlob, SpreadsheetFile } = tool;
+  const input = await FileBlob.load(SOURCE_XLSX);
+  const workbook = await SpreadsheetFile.importXlsx(input);
+  const rows = await sheetValues(workbook, "TUDO");
+  const headers = rows[0].map((h) => String(h || ""));
+
+  const matches = rows
+    .slice(1)
+    .filter((row) => row.some((cell) => cell !== null && cell !== ""))
+    .map((row, index) => {
+      const record = Object.fromEntries(headers.map((h, i) => [h || `col${i}`, row[i] ?? null]));
+      const goalsFor = record["Golos Marcados"];
+      const goalsAgainst = record["Golos Sofridos"];
+      return {
+        id: record.ID_Jogo || `jogo_${index + 1}`,
+        opponent: record["Equipa Adv"] || "",
+        round: record.Jornada || "",
+        venue: record.Local || "",
+        level: cleanLevel(pick(record, ["Escalão", "Escalão"])),
+        competition: pick(record, ["Competição", "Competicao"]) || "",
+        goalsFor: goalsFor ?? null,
+        goalsAgainst: goalsAgainst ?? null,
+        status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
+      };
+    });
+
+  const rosterSheets = {
+    Sub19: "Jogardoras SUB19",
+    Sub17: "Jogadoras SUB17",
+    Sub15: "Jogadoras SUB15",
+    Sub13: "Jogadoras SUB13",
+  };
+  const players = [];
+
+  for (const [level, sheetName] of Object.entries(rosterSheets)) {
+    const values = await sheetValues(workbook, sheetName);
+    const historyByPlayer = buildPlayerHistory(values);
+    const seen = new Set();
+    for (const row of values.slice(1)) {
+      const name = String(row[1] || "").trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const key = playerKey(name);
+      players.push({ id: playerId(level, name), level, name, number: "", position: "", history: historyByPlayer.get(key) || [] });
+    }
+  }
+
+  return {
+    meta: {
+      club: "Casa Pia AC",
+      createdAt: new Date().toISOString(),
+      sourceDir: SOURCE_DIR,
+      sourceWorkbook: SOURCE_XLSX,
+    },
+    teams: [
+      { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
+      { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
+      { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
+      { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
+    ],
+    players,
+    matches,
+    matchReports: {},
+    live: null,
+    events: [],
+  };
+}
+
+async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
+  const XLSX = await xlsxTool();
+  if (!XLSX) {
+    throw new Error("Importacao XLSX indisponivel. Executa npm install para instalar a dependencia xlsx.");
+  }
+
+  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false });
+  const sheetRows = (sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    return sheet ? XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null }) : [];
+  };
+  const photoRows = sheetRows("Plantel");
+  const photoMap = new Map();
+  for (const row of photoRows.slice(1)) {
+    const name = String(row[0] || "").trim();
+    const photoUrl = String(row[2] || "").trim().replaceAll("&amp;", "&");
+    if (name && photoUrl) photoMap.set(playerKey(name), photoUrl);
+  }
+
+  const rows = sheetRows("TUDO");
+  if (!rows.length) throw new Error("O Excel importado nao tem a folha TUDO.");
+  const headers = rows[0].map((h) => String(h || ""));
+
+  const matches = rows
+    .slice(1)
+    .filter((row) => row.some((cell) => cell !== null && cell !== ""))
+    .map((row, index) => {
+      const record = Object.fromEntries(headers.map((h, i) => [h || `col${i}`, row[i] ?? null]));
+      const goalsFor = record["Golos Marcados"];
+      const goalsAgainst = record["Golos Sofridos"];
+      return {
+        id: record.ID_Jogo || `jogo_${index + 1}`,
+        opponent: record["Equipa Adv"] || "",
+        round: record.Jornada || "",
+        venue: record.Local || "",
+        level: cleanLevel(pick(record, ["Escalão", "Escalao"])),
+        competition: pick(record, ["Competição", "Competicao"]) || "",
+        goalsFor: goalsFor ?? null,
+        goalsAgainst: goalsAgainst ?? null,
+        status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
+      };
+    });
+
+  const rosterSheets = {
+    Sub19: "Jogardoras SUB19",
+    Sub17: "Jogadoras SUB17",
+    Sub15: "Jogadoras SUB15",
+    Sub13: "Jogadoras SUB13",
+  };
+  const players = [];
+
+  for (const [level, sheetName] of Object.entries(rosterSheets)) {
+    const values = sheetRows(sheetName);
+    const historyByPlayer = buildPlayerHistory(values);
+    const seen = new Set();
+    for (const row of values.slice(1)) {
+      const name = String(row[1] || "").trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const key = playerKey(name);
+      players.push({
+        id: playerId(level, name),
+        level,
+        name,
+        number: "",
+        position: "",
+        photoUrl: photoMap.get(key) || "",
+        history: historyByPlayer.get(key) || [],
+      });
+    }
+  }
+
+  return {
+    meta: {
+      club: "Casa Pia AC",
+      createdAt: new Date().toISOString(),
+      sourceDir: SOURCE_DIR,
+      sourceWorkbook: filename,
+    },
+    teams: [
+      { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
+      { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
+      { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
+      { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
+    ],
+    players,
+    matches,
+    matchReports: {},
+    live: null,
+    events: [],
+  };
+}
+
+function preserveAppData(imported, current) {
+  return {
+    ...imported,
+    events: current.events || [],
+    matchReports: current.matchReports || {},
+    liveGames: current.liveGames || {},
+    hiddenLiveGames: current.hiddenLiveGames || [],
+    zerozero: current.zerozero || imported.zerozero || {},
+    live: current.live || null,
+  };
+}
+
+async function importWorkbookUrl(url = SOURCE_XLSX_URL) {
+  if (!url) throw new Error("CASA_PIA_XLSX_URL nao esta configurado.");
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Nao foi possivel descarregar o Excel (${response.status}).`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return importWorkbookBuffer(buffer, url);
+}
+
+async function syncFromConfiguredUrl(currentDb) {
+  const imported = await importWorkbookUrl();
+  const db = preserveAppData(imported, currentDb);
+  db.meta.importedAt = new Date().toISOString();
+  db.meta.syncMode = "url";
+  db.meta.sourceWorkbookUrl = SOURCE_XLSX_URL;
+  await saveDb(db);
+  lastSync = { ok: true, at: db.meta.importedAt, source: "url" };
+  return db;
+}
+
+async function seedPersistentDb() {
+  if (await exists(DB_PATH)) return;
+  const bundledDb = path.join(__dirname, "data", "db.json");
+  if (bundledDb !== DB_PATH && (await exists(bundledDb))) {
+    const seed = await readFile(bundledDb, "utf8");
+    await mkdir(DATA_DIR, { recursive: true });
+    await writeFile(DB_PATH, seed, "utf8");
+  }
+}
+
+async function loadDb() {
+  await mkdir(DATA_DIR, { recursive: true });
+  await seedPersistentDb();
+  if (!(await exists(DB_PATH))) {
+    if (SOURCE_XLSX_URL) {
+      const imported = await importWorkbookUrl();
+      await writeFile(DB_PATH, JSON.stringify(imported, null, 2), "utf8");
+      return imported;
+    }
+    if (!(await exists(SOURCE_XLSX))) {
+      throw new Error(`Base de dados não encontrada em ${DB_PATH}. Publica o ficheiro data/db.json ou configura CASA_PIA_XLSX.`);
+    }
+    const imported = await importWorkbook();
+    await writeFile(DB_PATH, JSON.stringify(imported, null, 2), "utf8");
+    return imported;
+  }
+  const text = await readFile(DB_PATH, "utf8");
+  return JSON.parse(text.replace(/^\uFEFF/, ""));
+}
+
+async function saveDb(db) {
+  db.meta.updatedAt = new Date().toISOString();
+  await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
+}
+
+async function backupDb(reason = "alteracao") {
+  if (!(await exists(DB_PATH))) return null;
+  await mkdir(BACKUP_DIR, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const target = path.join(BACKUP_DIR, `db-${stamp}-${slugKey(reason)}.json`);
+  await copyFile(DB_PATH, target);
+  return target;
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const text = Buffer.concat(chunks).toString("utf8");
+  return text ? JSON.parse(text) : {};
+}
+
+function send(res, status, payload, type = "application/json; charset=utf-8") {
+  const body = typeof payload === "string" || Buffer.isBuffer(payload) ? payload : JSON.stringify(payload);
+  res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store" });
+  res.end(body);
+}
+
+function notFound(res) {
+  send(res, 404, { error: "Não encontrado" });
+}
+
+function currentMatch(db) {
+  return db.matches.find((match) => match.id === db.live?.matchId) || null;
+}
+
+function ensureLiveGames(db) {
+  db.liveGames ||= {};
+  if (db.live?.matchId) {
+    db.liveGames[db.live.matchId] ||= db.live;
+  }
+  return db.liveGames;
+}
+
+function applyEventToLive(db, event) {
+  ensureLiveGames(db);
+  const live = db.liveGames[event.matchId] || db.live;
+  if (!live) return;
+  if (event.team === "Casa Pia" && event.type === "Golo") live.homeScore += 1;
+  if (event.team === "Adversário" && event.type === "Golo") live.awayScore += 1;
+  if (event.team === "Casa Pia" && event.type === "Canto") live.cornersFor += 1;
+  if (event.team === "Adversário" && event.type === "Canto") live.cornersAgainst += 1;
+  if (!live.liveEnded) live.status = live.status || "Em direto";
+  live.period = event.period || live.period || "Jogo";
+  live.updatedAt = new Date().toISOString();
+  db.liveGames[event.matchId] = live;
+  if (db.live?.matchId === event.matchId) db.live = live;
+}
+
+function recomputeLiveFromEvents(db, matchId) {
+  const live = (db.liveGames || {})[matchId] || (db.live?.matchId === matchId ? db.live : null);
+  if (!live) return;
+  live.homeScore = 0;
+  live.awayScore = 0;
+  live.cornersFor = 0;
+  live.cornersAgainst = 0;
+  db.events
+    .filter((event) => event.matchId === matchId)
+    .slice()
+    .reverse()
+    .forEach((event) => {
+      if (event.team === "Casa Pia" && event.type === "Golo") live.homeScore += 1;
+      if (event.team === "Adversário" && event.type === "Golo") live.awayScore += 1;
+      if (event.team === "Casa Pia" && event.type === "Canto") live.cornersFor += 1;
+      if (event.team === "Adversário" && event.type === "Canto") live.cornersAgainst += 1;
+    });
+  live.updatedAt = new Date().toISOString();
+  db.liveGames ||= {};
+  db.liveGames[matchId] = live;
+  if (db.live?.matchId === matchId) db.live = live;
+}
+
+async function exportXlsx(db) {
+  const tool = await spreadsheetTool();
+  if (!tool) {
+    const filename = `casa-pia-registos-${new Date().toISOString().slice(0, 10)}.json`;
+    const target = path.join(OUTPUT_DIR, filename);
+    await mkdir(OUTPUT_DIR, { recursive: true });
+    await writeFile(target, JSON.stringify(db, null, 2), "utf8");
+    return { filename, href: `/outputs/${filename}`, path: target };
+  }
+  const { SpreadsheetFile, Workbook } = tool;
+  await mkdir(OUTPUT_DIR, { recursive: true });
+  const workbook = Workbook.create();
+
+  const jogos = workbook.worksheets.add("Jogos");
+  jogos.getRange("A1:H1").values = [["ID_Jogo", "Escalão", "Competição", "Adversário", "Local", "Jornada", "Golos CP", "Golos Adv"]];
+  jogos.getRangeByIndexes(1, 0, db.matches.length, 8).values = db.matches.map((m) => [
+    m.id,
+    m.level,
+    m.competition,
+    m.opponent,
+    m.venue,
+    m.round,
+    m.goalsFor,
+    m.goalsAgainst,
+  ]);
+
+  const atletas = workbook.worksheets.add("Jogadoras");
+  atletas.getRange("A1:E1").values = [["ID", "Escalão", "Nome", "Número", "Posição"]];
+  atletas.getRangeByIndexes(1, 0, db.players.length, 5).values = db.players.map((p) => [p.id, p.level, p.name, p.number, p.position]);
+
+  const eventos = workbook.worksheets.add("Eventos");
+  eventos.getRange("A1:L1").values = [["Data", "ID_Jogo", "Período", "Tipo", "Equipa", "Jogadora", "Assistência", "Sai", "Entra", "Cantos CP", "Cantos Adv", "Notas"]];
+  if (db.events.length) {
+    eventos.getRangeByIndexes(1, 0, db.events.length, 12).values = db.events.map((e) => [
+      e.createdAt,
+      e.matchId,
+      e.period,
+      e.type,
+      e.team,
+      e.playerName,
+      e.assistName,
+      e.outPlayerName,
+      e.inPlayerName,
+      e.cornersFor,
+      e.cornersAgainst,
+      e.notes,
+    ]);
+  }
+
+  const relatorios = workbook.worksheets.add("Relatorios");
+  relatorios.getRange("A1:H1").values = [["ID_Jogo", "Tática", "Titulares", "Suplentes", "Notas", "Criado", "Atualizado", "Delegado"]];
+  const reports = Object.entries(db.matchReports);
+  if (reports.length) {
+    relatorios.getRangeByIndexes(1, 0, reports.length, 8).values = reports.map(([matchId, report]) => [
+      matchId,
+      report.tactic || "",
+      (report.starters || []).join(", "),
+      (report.bench || []).join(", "),
+      report.notes || "",
+      report.createdAt || "",
+      report.updatedAt || "",
+      report.delegate || "",
+    ]);
+  }
+
+  for (const sheet of [jogos, atletas, eventos, relatorios]) {
+    sheet.getRange("A1:Z1").format = { fill: "#111111", font: { color: "#FFFFFF", bold: true } };
+    sheet.freezePanes.freezeRows(1);
+    sheet.getUsedRange().format.autofitColumns();
+  }
+
+  const filename = `casa-pia-registos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const target = path.join(OUTPUT_DIR, filename);
+  const file = await SpreadsheetFile.exportXlsx(workbook);
+  await file.save(target);
+  return { filename, href: `/outputs/${filename}`, path: target };
+}
+
+async function api(req, res, url) {
+  let db = await loadDb();
+
+  if (req.method === "GET" && url.pathname === "/api/bootstrap") {
+    ensureLiveGames(db);
+    db.hiddenLiveGames ||= [];
+    send(res, 200, { ...db, currentMatch: currentMatch(db) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/reload-source") {
+    db = preserveAppData(await importWorkbook(), db);
+    await saveDb(db);
+    send(res, 200, { ...db, currentMatch: currentMatch(db) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/import-xlsx") {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const filename = req.headers["x-filename"] || "upload.xlsx";
+    db = preserveAppData(await importWorkbookBuffer(Buffer.concat(chunks), filename), db);
+    db.meta.importedAt = new Date().toISOString();
+    await saveDb(db);
+    send(res, 200, { ...db, currentMatch: currentMatch(db) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/sync-excel-url") {
+    db = await syncFromConfiguredUrl(db);
+    send(res, 200, { ...db, currentMatch: currentMatch(db), sync: lastSync });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/sync-status") {
+    send(res, 200, {
+      configured: Boolean(SOURCE_XLSX_URL),
+      autoSyncMinutes: AUTO_SYNC_MINUTES,
+      lastSync,
+      zerozero: {
+        configured: true,
+        autoSyncMinutes: ZEROZERO_AUTO_SYNC_MINUTES,
+        autoSyncSeason: ZEROZERO_AUTO_SYNC_SEASON,
+        untilCurrent: ZEROZERO_AUTO_SYNC_UNTIL_CURRENT,
+        lastSync: lastZerozeroSync || db.zerozero?.lastSync || null,
+      },
+    });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/results") {
+    send(res, 200, {
+      current: db.matches || [],
+      zerozero: db.zerozero?.matches || [],
+      zerozeroStatus: lastZerozeroSync || db.zerozero?.lastSync || null,
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/sync-zerozero") {
+    const body = await readBody(req);
+    try {
+      const result = await syncZerozeroResults(db, {
+        dryRun: Boolean(body.dryRun),
+        updateResults: body.updateResults !== false,
+        season: body.season || body.seasonId || "2025/2026",
+        untilCurrent: Boolean(body.untilCurrent),
+        levels: Array.isArray(body.levels) ? body.levels : [],
+      });
+      db = result.db;
+      lastZerozeroSync = result.status;
+      if (!body.dryRun) await saveDb(db);
+      send(res, 200, { ...db, currentMatch: currentMatch(db), status: result.status, zerozero: db.zerozero || {} });
+    } catch (error) {
+      lastZerozeroSync = {
+        ok: false,
+        at: new Date().toISOString(),
+        source: "ZEROZERO",
+        blocked: /403|429|401|bloque/i.test(error.message || ""),
+        error: error.message || "Erro na sincronização ZeroZero",
+      };
+      send(res, 200, { status: lastZerozeroSync, zerozero: db.zerozero || {} });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/live") {
+    const body = await readBody(req);
+    db.live = { ...(db.live || {}), ...body, updatedAt: new Date().toISOString() };
+    if (!db.live.status) db.live.status = "Em direto";
+    ensureLiveGames(db);
+    db.hiddenLiveGames = (db.hiddenLiveGames || []).filter((id) => id !== db.live.matchId);
+    if (db.live.matchId) {
+      db.liveGames[db.live.matchId] = db.live;
+    }
+    await saveDb(db);
+    send(res, 200, { live: db.live, currentMatch: currentMatch(db) });
+    return;
+  }
+
+  if (req.method === "DELETE" && url.pathname.startsWith("/api/live/")) {
+    const matchId = decodeURIComponent(url.pathname.replace("/api/live/", ""));
+    ensureLiveGames(db);
+    delete db.liveGames[matchId];
+    db.hiddenLiveGames ||= [];
+    if (!db.hiddenLiveGames.includes(matchId)) db.hiddenLiveGames.push(matchId);
+    if (db.live?.matchId === matchId) {
+      db.live = { ...db.live, status: "Por iniciar", period: "Pre-jogo", liveEnded: false, updatedAt: new Date().toISOString() };
+    }
+    await saveDb(db);
+    send(res, 200, { liveGames: db.liveGames });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/report") {
+    const body = await readBody(req);
+    if (body.clear) {
+      delete db.matchReports[body.matchId];
+    } else {
+      const existing = db.matchReports[body.matchId] || {};
+      db.matchReports[body.matchId] = {
+        ...existing,
+        ...body,
+        updatedAt: new Date().toISOString(),
+        createdAt: existing.createdAt || new Date().toISOString(),
+      };
+    }
+    await saveDb(db);
+    send(res, 200, { report: db.matchReports[body.matchId] || null });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/events") {
+    const body = await readBody(req);
+    const matchId = body.matchId || db.live?.matchId;
+    const matchLive = db.liveGames?.[matchId] || (db.live?.matchId === matchId ? db.live : null);
+    if (body.team !== "Sistema") {
+      if (!matchLive || !["1ª Parte", "2ª Parte"].includes(matchLive.period || "") || matchLive.liveEnded) {
+        send(res, 400, { error: "Só é possível registar eventos durante a 1ª ou a 2ª parte." });
+        return;
+      }
+    }
+    const event = {
+      id: `evt_${Date.now()}`,
+      matchId,
+      period: body.period || matchLive?.period || db.live?.period || "Jogo",
+      type: body.type,
+      team: body.team || "Casa Pia",
+      playerId: body.playerId || "",
+      playerName: body.playerName || "",
+      assistId: body.assistId || "",
+      assistName: body.assistName || "",
+      outPlayerId: body.outPlayerId || "",
+      outPlayerName: body.outPlayerName || "",
+      inPlayerId: body.inPlayerId || "",
+      inPlayerName: body.inPlayerName || "",
+      cornersFor: db.live?.cornersFor || 0,
+      cornersAgainst: db.live?.cornersAgainst || 0,
+      notes: body.notes || "",
+      createdAt: new Date().toISOString(),
+    };
+    db.events.unshift(event);
+    applyEventToLive(db, event);
+    event.cornersFor = db.live?.cornersFor || 0;
+    event.cornersAgainst = db.live?.cornersAgainst || 0;
+    await saveDb(db);
+    send(res, 201, { event, live: db.live });
+    return;
+  }
+
+  if (req.method === "DELETE" && url.pathname.startsWith("/api/events/")) {
+    const eventId = decodeURIComponent(url.pathname.replace("/api/events/", ""));
+    const removed = db.events.find((event) => event.id === eventId);
+    const before = db.events.length;
+    db.events = db.events.filter((event) => event.id !== eventId);
+    if (removed?.matchId) recomputeLiveFromEvents(db, removed.matchId);
+    await saveDb(db);
+    send(res, 200, { deleted: before - db.events.length, events: db.events });
+    return;
+  }
+
+  if (req.method === "DELETE" && url.pathname.startsWith("/api/matches/")) {
+    const matchId = decodeURIComponent(url.pathname.replace("/api/matches/", ""));
+    const match = db.matches.find((item) => item.id === matchId);
+    if (!match) {
+      send(res, 404, { error: "Jogo não encontrado." });
+      return;
+    }
+    await backupDb(`apagar-jogo-${matchId}`);
+    db.matches = db.matches.filter((item) => item.id !== matchId);
+    db.events = (db.events || []).filter((event) => event.matchId !== matchId);
+    delete db.matchReports?.[matchId];
+    delete db.liveGames?.[matchId];
+    db.hiddenLiveGames = (db.hiddenLiveGames || []).filter((id) => id !== matchId);
+    if (db.live?.matchId === matchId) db.live = null;
+    if (db.zerozero?.matches) db.zerozero.matches = db.zerozero.matches.filter((item) => item.id !== matchId);
+    if (db.zerozero?.seasons) {
+      for (const season of Object.keys(db.zerozero.seasons)) {
+        db.zerozero.seasons[season] = db.zerozero.seasons[season].filter((item) => item.id !== matchId);
+      }
+    }
+    await saveDb(db);
+    send(res, 200, { deleted: 1, matchId });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/manual-match") {
+    const body = await readBody(req);
+    const level = cleanLevel(body.level || "Sub13");
+    const season = String(body.season || "").trim();
+    const competition = String(body.competition || "").trim();
+    const opponent = String(body.opponent || "").trim();
+    if (!competition || !opponent) {
+      send(res, 400, { error: "Indica pelo menos competição e adversário." });
+      return;
+    }
+    const goalsFor = body.goalsFor === "" || body.goalsFor === null || body.goalsFor === undefined ? null : Number(body.goalsFor);
+    const goalsAgainst = body.goalsAgainst === "" || body.goalsAgainst === null || body.goalsAgainst === undefined ? null : Number(body.goalsAgainst);
+    const id = body.id || `manual_${level}_${slugKey(`${season}_${competition}_${opponent}_${body.round || ""}_${body.venue || ""}`)}`;
+    const match = {
+      id,
+      opponent,
+      round: String(body.round || "").trim(),
+      venue: String(body.venue || "").trim() || "Casa",
+      level,
+      season,
+      competition,
+      date: String(body.date || "").trim(),
+      time: String(body.time || "").trim(),
+      goalsFor,
+      goalsAgainst,
+      status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
+      source: "MANUAL",
+      updatedAt: new Date().toISOString(),
+    };
+    const index = db.matches.findIndex((item) => item.id === id);
+    if (index >= 0) db.matches[index] = { ...db.matches[index], ...match };
+    else db.matches.push(match);
+    db.matches.sort((a, b) => `${a.season || ""}${a.level}${a.date || ""}${a.time || ""}`.localeCompare(`${b.season || ""}${b.level}${b.date || ""}${b.time || ""}`));
+    await saveDb(db);
+    send(res, 200, { ...db, currentMatch: currentMatch(db), manualMatch: match });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/export") {
+    const exported = await exportXlsx(db);
+    send(res, 200, exported);
+    return;
+  }
+
+  notFound(res);
+}
+
+async function staticFile(req, res, url) {
+  let relative = decodeURIComponent(url.pathname);
+  if (relative === "/") relative = "/index.html";
+  const root = relative.startsWith("/outputs/") ? OUTPUT_DIR : path.join(__dirname, "public");
+  const file = relative.startsWith("/outputs/")
+    ? path.join(root, relative.replace("/outputs/", ""))
+    : path.join(root, relative);
+
+  if (!file.startsWith(root)) {
+    notFound(res);
+    return;
+  }
+
+  try {
+    const body = await readFile(file);
+    send(res, 200, body, MIME[path.extname(file)] || "application/octet-stream");
+  } catch {
+    notFound(res);
+  }
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  try {
+    if (url.pathname.startsWith("/api/")) await api(req, res, url);
+    else await staticFile(req, res, url);
+  } catch (error) {
+    console.error(error);
+    send(res, 500, { error: error.message || "Erro no servidor" });
+  }
+});
+
+function startAutoSync() {
+  if (!SOURCE_XLSX_URL || !AUTO_SYNC_MINUTES) return;
+  const run = async () => {
+    try {
+      const db = await loadDb();
+      await syncFromConfiguredUrl(db);
+      console.log(`Excel sincronizado em ${lastSync.at}`);
+    } catch (error) {
+      lastSync = { ok: false, at: new Date().toISOString(), error: error.message || "Erro na sincronização" };
+      console.error("Falha na sincronização Excel:", error);
+    }
+  };
+  setTimeout(run, 5000);
+  setInterval(run, AUTO_SYNC_MINUTES * 60 * 1000);
+}
+
+function startZerozeroAutoSync() {
+  if (!ZEROZERO_AUTO_SYNC_MINUTES) return;
+  const run = async () => {
+    try {
+      const db = await loadDb();
+      const result = await syncZerozeroResults(db, {
+        season: ZEROZERO_AUTO_SYNC_SEASON,
+        untilCurrent: ZEROZERO_AUTO_SYNC_UNTIL_CURRENT,
+        updateResults: true,
+      });
+      lastZerozeroSync = result.status;
+      await saveDb(result.db);
+      console.log(`ZeroZero sincronizado em ${lastZerozeroSync.at}`);
+    } catch (error) {
+      lastZerozeroSync = { ok: false, at: new Date().toISOString(), error: error.message || "Erro na sincronização ZeroZero" };
+      console.error("Falha na sincronização ZeroZero:", error);
+    }
+  };
+  setTimeout(run, 12000);
+  setInterval(run, ZEROZERO_AUTO_SYNC_MINUTES * 60 * 1000);
+}
+
+server.listen(PORT, () => {
+  console.log(`Casa Pia Live disponível em http://localhost:${PORT}`);
+  console.log(`Fonte de dados: ${SOURCE_DIR}`);
+  if (SOURCE_XLSX_URL) console.log(`Sincronização Excel URL ativa: ${AUTO_SYNC_MINUTES || "manual"} min`);
+  if (ZEROZERO_AUTO_SYNC_MINUTES) console.log(`Sincronização ZeroZero ativa: ${ZEROZERO_AUTO_SYNC_MINUTES} min`);
+  startAutoSync();
+  startZerozeroAutoSync();
+});
