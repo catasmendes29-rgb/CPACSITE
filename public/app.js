@@ -829,18 +829,7 @@ function renderDataPage() {
   const visibleGroups = [...groups.entries()];
   $("#historyTable").innerHTML = visibleGroups
     .map(([competition, matches]) => {
-      const rows = matches.map((match) => {
-        const kind = resultKind(match);
-        const result = kind === "pending" ? "Por jogar" : `<span class="score"><span class="goals-for">${match.goalsFor}</span>-<span class="goals-against">${match.goalsAgainst}</span></span>`;
-        return [
-          match.round || "-",
-          match.opponent,
-          match.venue || "-",
-          result,
-          `<span class="badge ${kind}">${resultLetter(kind)}</span>`,
-        ];
-      });
-      return `<h3 class="competition-title">${competition}</h3>${table(["Jornada", "Adversário", "Local", "Resultado", "Estado"], rows)}`;
+      return `<h3 class="competition-title">${escapeHtml(competition)}</h3>${historyTable(matches)}`;
     })
     .join("") || "<p>Sem jogos para esta competição.</p>";
 }
@@ -959,6 +948,54 @@ function liveGames() {
     .filter((item) => item.match && item.hasReport);
 }
 
+function formatDateTime(value) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" });
+}
+
+function matchSourceLabel(match) {
+  if (match.source === "ZEROZERO") return "ZeroZero";
+  if (match.source === "MANUAL") return "Manual";
+  if (match.source === "EXCEL") return "Excel";
+  return match.source || "Excel / base inicial";
+}
+
+function matchUpdatedAt(match) {
+  return match.updatedAt || match.syncedAt || match.importedAt || state.db.zerozero?.lastSync?.at || state.db.meta?.updatedAt || "";
+}
+
+function showMatchAdmin(matchId) {
+  if (!isAdmin()) return;
+  const match = matchById(matchId);
+  if (!match) return;
+  const report = state.db.matchReports?.[matchId];
+  const live = state.db.liveGames?.[matchId] || (state.db.live?.matchId === matchId ? state.db.live : null);
+  const events = state.db.events.filter((event) => event.matchId === matchId);
+  $("#matchAdminContent").innerHTML = `
+    <h2>Gestão do jogo</h2>
+    <p class="modal-kicker">${escapeHtml(match.level || "-")} · ${escapeHtml(match.competition || "Sem competição")}</p>
+    <h3>Casa Pia ${match.goalsFor ?? live?.homeScore ?? 0} - ${match.goalsAgainst ?? live?.awayScore ?? 0} ${escapeHtml(match.opponent || "Adversário")}</h3>
+    <dl class="match-meta-list">
+      <div><dt>Fonte</dt><dd>${escapeHtml(matchSourceLabel(match))}</dd></div>
+      <div><dt>Época</dt><dd>${escapeHtml(match.season || "-")}</dd></div>
+      <div><dt>Atualizado</dt><dd>${escapeHtml(formatDateTime(matchUpdatedAt(match)))}</dd></div>
+      <div><dt>Estado</dt><dd>${escapeHtml(live?.status || match.status || "-")}</dd></div>
+      <div><dt>Ficha</dt><dd>${report ? "Criada" : "Sem ficha"}</dd></div>
+      <div><dt>Eventos</dt><dd>${events.length}</dd></div>
+    </dl>
+    <p class="modal-note">Ao apagar, este jogo sai dos Resultados, Live, ficha e eventos. Antes de apagar, o servidor cria um backup do db.json.</p>
+    <button class="danger delete-match" data-match-id="${escapeHtml(match.id)}">Apagar jogo</button>
+  `;
+  $("#matchAdminModal").hidden = false;
+}
+
+function hideMatchAdmin() {
+  $("#matchAdminModal").hidden = true;
+  $("#matchAdminContent").innerHTML = "";
+}
+
 function renderLiveHub() {
   const list = $("#liveGamesList");
   if (!list) return;
@@ -1013,6 +1050,27 @@ function table(headers, rows) {
     ? rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`).join("")
     : `<tr><td colspan="${headers.length}">Sem dados registados.</td></tr>`;
   return `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function historyTable(matches) {
+  const headers = ["Jornada", "Adversário", "Local", "Resultado", "Estado"];
+  const rows = matches.length
+    ? matches.map((match) => {
+        const kind = resultKind(match);
+        const result = kind === "pending" ? "Por jogar" : `<span class="score"><span class="goals-for">${match.goalsFor}</span>-<span class="goals-against">${match.goalsAgainst}</span></span>`;
+        const clickable = isAdmin() ? "match-admin-row" : "";
+        return `
+          <tr class="${clickable}" data-match-id="${escapeHtml(match.id)}">
+            <td>${escapeHtml(match.round || "-")}</td>
+            <td>${escapeHtml(match.opponent || "-")}</td>
+            <td>${escapeHtml(match.venue || "-")}</td>
+            <td>${result}</td>
+            <td><span class="badge ${kind}">${resultLetter(kind)}</span></td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="${headers.length}">Sem dados registados.</td></tr>`;
+  return `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function hydrateReportFields() {
@@ -1187,6 +1245,28 @@ $("#logoutBtn").addEventListener("click", () => {
 });
 
 document.addEventListener("click", async (event) => {
+  const matchRow = event.target.closest(".match-admin-row");
+  if (matchRow && isAdmin()) {
+    showMatchAdmin(matchRow.dataset.matchId);
+    return;
+  }
+
+  const deleteMatch = event.target.closest(".delete-match");
+  if (deleteMatch && isAdmin()) {
+    const match = matchById(deleteMatch.dataset.matchId);
+    if (!match) return;
+    if (!confirm(`Apagar definitivamente o jogo Casa Pia vs ${match.opponent}?`)) return;
+    await request(`/api/matches/${encodeURIComponent(match.id)}`, { method: "DELETE" });
+    hideMatchAdmin();
+    applyFreshDb(await request("/api/bootstrap"));
+    return;
+  }
+
+  if (event.target.closest("#closeMatchAdmin") || event.target.id === "matchAdminModal") {
+    hideMatchAdmin();
+    return;
+  }
+
   const teamPlayer = event.target.closest(".team-player-card");
   if (teamPlayer) {
     state.selectedPlayerId = teamPlayer.dataset.playerId;
