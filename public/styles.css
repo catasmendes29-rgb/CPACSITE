@@ -700,6 +700,9 @@ textarea {
 
 .delegate-actions {
   grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 8px;
   padding: 12px;
@@ -709,6 +712,45 @@ textarea {
 .delegate-actions button {
   width: 100%;
   min-height: 46px;
+}
+
+#delegateSetup > .compact {
+  grid-column: 1;
+  grid-row: 1;
+  position: static;
+}
+
+#delegateSetup > .lineup-panel {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.site-footer {
+  width: min(100% - 36px, 1280px);
+  margin: 28px auto 0;
+  padding: 18px 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255,255,255,0.55);
+  border-top: 1px solid rgba(255,255,255,0.14);
+}
+
+.site-footer img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.site-footer span {
+  flex: 1;
+  font-size: 0.86rem;
+}
+
+.site-footer a {
+  color: var(--red);
+  font-weight: 900;
+  text-decoration: underline;
 }
 
 .ghost {
@@ -1405,6 +1447,13 @@ th {
 
   .compact {
     position: static;
+  }
+
+  #delegateSetup > .compact,
+  #delegateSetup > .lineup-panel,
+  #delegateSetup > .delegate-actions {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .player-picker,
