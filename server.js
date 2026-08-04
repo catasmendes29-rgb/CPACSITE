@@ -22,6 +22,7 @@ const AUTO_SYNC_MINUTES = Number(process.env.CASA_PIA_AUTO_SYNC_MINUTES || 0);
 const ZEROZERO_AUTO_SYNC_MINUTES = Number(process.env.ZEROZERO_AUTO_SYNC_MINUTES || 0);
 const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024/2025";
 const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
+const EXCEL_DEFAULT_SEASON = process.env.CASA_PIA_EXCEL_SEASON || "2025/2026";
 let lastSync = null;
 let lastZerozeroSync = null;
 
@@ -115,7 +116,7 @@ function buildPlayerHistory(values) {
     if (!name || !opponent) continue;
     const item = {
       opponent,
-      season: String(pick(record, ["Época", "Epoca", "Temporada", "Season"]) || "").trim(),
+      season: String(pick(record, ["Época", "Epoca", "Temporada", "Season"]) || EXCEL_DEFAULT_SEASON).trim(),
       role: String(pick(record, ["Papel", "Função", "Funcao"]) || "").trim() || "-",
       minutes: pick(record, ["Tempo de Jogo (min)", "Minutos", "Tempo de Jogo"]) ?? "",
       yellows: numberValue(pick(record, ["Cartões Amarelos", "Cartoes Amarelos", "Amarelos"])),
@@ -165,6 +166,7 @@ async function importWorkbookLegacy() {
         venue: record.Local || "",
         level: cleanLevel(pick(record, ["Escalão", "Escalão"])),
         competition: pick(record, ["Competição", "Competicao"]) || "",
+        season: String(pick(record, ["Época", "Epoca", "Temporada", "Season"]) || EXCEL_DEFAULT_SEASON).trim(),
         goalsFor: goalsFor ?? null,
         goalsAgainst: goalsAgainst ?? null,
         status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
@@ -251,6 +253,7 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
         venue: record.Local || "",
         level: cleanLevel(pick(record, ["Escalão", "Escalao"])),
         competition: pick(record, ["Competição", "Competicao"]) || "",
+        season: String(pick(record, ["Época", "Epoca", "Temporada", "Season"]) || EXCEL_DEFAULT_SEASON).trim(),
         goalsFor: goalsFor ?? null,
         goalsAgainst: goalsAgainst ?? null,
         status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
