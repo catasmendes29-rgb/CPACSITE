@@ -133,6 +133,7 @@ function seasonMatches() {
 }
 
 function dataLevelMatches(level = state.dataLevel) {
+  if (level === "all") return seasonMatches();
   return seasonMatches().filter((match) => match.level === level);
 }
 
@@ -355,7 +356,7 @@ function keepResultFilters(callback) {
   };
   callback();
   const teams = teamOptions();
-  if (teams.some((team) => team.level === filters.dataLevel)) state.dataLevel = filters.dataLevel;
+  if (filters.dataLevel === "all" || teams.some((team) => team.level === filters.dataLevel)) state.dataLevel = filters.dataLevel;
   if (teams.some((team) => team.level === filters.teamsLevel)) state.teamsLevel = filters.teamsLevel;
   if (filters.resultsSeason === "all" || availableSeasons().includes(filters.resultsSeason)) state.resultsSeason = filters.resultsSeason;
   state.competitionFilter = filters.competitionFilter;
@@ -375,6 +376,7 @@ function renderSelectors() {
   levelSelect.innerHTML = "";
   dataLevelSelect.innerHTML = "";
   if (manualLevelSelect) manualLevelSelect.innerHTML = "";
+  dataLevelSelect.append(option("Todos os escalões", "all"));
 
   delegateTeams.forEach((team) => {
     levelSelect.append(option(team.label, team.level));
@@ -386,8 +388,9 @@ function renderSelectors() {
   });
 
   levelSelect.value = state.level;
+  if (state.dataLevel !== "all" && !teamOptions().some((team) => team.level === state.dataLevel)) state.dataLevel = "all";
   dataLevelSelect.value = state.dataLevel;
-  if (manualLevelSelect) manualLevelSelect.value = state.dataLevel;
+  if (manualLevelSelect) manualLevelSelect.value = state.dataLevel === "all" ? state.level : state.dataLevel;
   if ($("#manualSeason") && !$("#manualSeason").value) $("#manualSeason").value = state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason;
 
   $("#manualOpponentWrap").hidden = false;
@@ -1169,7 +1172,7 @@ async function refreshLive() {
 function applyFreshDb(fresh) {
   state.db = fresh;
   state.level = teamOptions().find((team) => team.level === state.level)?.level || teamOptions()[0]?.level || "Sub13";
-  state.dataLevel = teamOptions().find((team) => team.level === state.dataLevel)?.level || state.level;
+  state.dataLevel = state.dataLevel === "all" ? "all" : teamOptions().find((team) => team.level === state.dataLevel)?.level || state.level;
   state.teamsLevel = teamOptions().find((team) => team.level === state.teamsLevel)?.level || state.level;
   restoreActiveDelegateMatch();
   renderAll();
