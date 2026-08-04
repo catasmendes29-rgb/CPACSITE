@@ -129,7 +129,7 @@ function availableSeasons() {
 function seasonMatches() {
   if (!state.db?.matches) return [];
   if (!state.resultsSeason || state.resultsSeason === "all") return state.db.matches;
-  return state.db.matches.filter((match) => !match.season || match.season === state.resultsSeason);
+  return state.db.matches.filter((match) => match.season === state.resultsSeason);
 }
 
 function dataLevelMatches(level = state.dataLevel) {
@@ -837,8 +837,7 @@ function renderDataPage() {
 function playerAppearances(player) {
   const history = player.history || [];
   if (!state.resultsSeason || state.resultsSeason === "all") return history;
-  const filtered = history.filter((item) => !item.season || item.season === state.resultsSeason);
-  return filtered.length ? filtered : history;
+  return history.filter((item) => item.season === state.resultsSeason);
 }
 
 function playerStats(player) {
