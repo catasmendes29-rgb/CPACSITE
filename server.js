@@ -101,6 +101,35 @@ function slugKey(value) {
   return playerKey(value).replace(/\s+/g, "_");
 }
 
+function fixMojibake(value) {
+  let text = String(value || "");
+  const replacements = {
+    "ÃƒÂ¡": "á", "ÃƒÂÁ": "Á",
+    "ÃƒÂ©": "é", "ÃƒÂ‰": "É",
+    "ÃƒÂ­": "í", "ÃƒÂÍ": "Í",
+    "ÃƒÂ³": "ó", "ÃƒÂ“": "Ó",
+    "ÃƒÂº": "ú", "ÃƒÂš": "Ú",
+    "ÃƒÂ¢": "â", "ÃƒÂª": "ê", "ÃƒÂ´": "ô",
+    "ÃƒÂ£": "ã", "ÃƒÂµ": "õ",
+    "ÃƒÂ§": "ç", "ÃƒÂ‡": "Ç",
+  };
+  for (const [bad, good] of Object.entries(replacements)) text = text.replaceAll(bad, good);
+  try {
+    for (let i = 0; i < 3 && /[ÃÂâ]/.test(text); i += 1) {
+      const fixed = Buffer.from(text, "latin1").toString("utf8").replace(/\uFFFD/g, "").trim();
+      if (!fixed || fixed === text) break;
+      text = fixed;
+    }
+    return text;
+  } catch {
+    return text;
+  }
+}
+
+function cleanStoredText(value) {
+  return fixMojibake(value).replace(/\s+/g, " ").trim();
+}
+
 function ensureBaseShape(db) {
   let changed = false;
   db.meta ||= { club: "Casa Pia AC" };
@@ -111,6 +140,7 @@ function ensureBaseShape(db) {
   db.matchReports ||= {};
   db.liveGames ||= {};
   db.hiddenLiveGames ||= [];
+  db.deletedMatchIds ||= [];
   const requiredTeams = [
     { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
     { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
@@ -129,12 +159,31 @@ function ensureBaseShape(db) {
       match.season = EXCEL_DEFAULT_SEASON;
       changed = true;
     }
+    for (const key of ["opponent", "competition", "round", "venue", "level"]) {
+      const cleaned = cleanStoredText(match[key]);
+      if (match[key] && cleaned !== match[key]) {
+        match[key] = cleaned;
+        changed = true;
+      }
+    }
   }
   for (const player of db.players) {
+    const cleanName = cleanStoredText(player.name);
+    if (player.name && cleanName !== player.name) {
+      player.name = cleanName;
+      changed = true;
+    }
     for (const item of player.history || []) {
       if (!item.season) {
         item.season = EXCEL_DEFAULT_SEASON;
         changed = true;
+      }
+      for (const key of ["opponent", "role"]) {
+        const cleaned = cleanStoredText(item[key]);
+        if (item[key] && cleaned !== item[key]) {
+          item[key] = cleaned;
+          changed = true;
+        }
       }
     }
   }
@@ -352,12 +401,21 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
 }
 
 function preserveAppData(imported, current) {
+  const deleted = new Set(current.deletedMatchIds || []);
+  imported.matches = (imported.matches || []).filter((match) => !deleted.has(match.id));
+  const importedIds = new Set((imported.matches || []).map((match) => match.id));
+  const preservedMatches = (current.matches || [])
+    .filter((match) => !deleted.has(match.id))
+    .filter((match) => !importedIds.has(match.id))
+    .filter((match) => match.source === "ZEROZERO" || match.season !== EXCEL_DEFAULT_SEASON);
   return {
     ...imported,
+    matches: [...(imported.matches || []), ...preservedMatches],
     events: current.events || [],
     matchReports: current.matchReports || {},
     liveGames: current.liveGames || {},
     hiddenLiveGames: current.hiddenLiveGames || [],
+    deletedMatchIds: current.deletedMatchIds || [],
     zerozero: current.zerozero || imported.zerozero || {},
     live: current.live || null,
   };
@@ -394,6 +452,26 @@ async function seedPersistentDb() {
   }
 }
 
+async function mergeBundledSeasonSeed(db) {
+  const bundledDb = path.join(__dirname, "data", "db.json");
+  if (bundledDb === DB_PATH || !(await exists(bundledDb))) return false;
+  const bundled = JSON.parse((await readFile(bundledDb, "utf8")).replace(/^\uFEFF/, ""));
+  const seedMatches = (bundled.matches || []).filter((match) => match.season === "2024/2025");
+  if (!seedMatches.length) return false;
+  const current2425 = (db.matches || []).filter((match) => match.season === "2024/2025").length;
+  if (current2425 >= seedMatches.length) return false;
+  const byId = new Map((db.matches || []).map((match) => [match.id, match]));
+  const deleted = new Set(db.deletedMatchIds || []);
+  seedMatches.forEach((match) => {
+    if (!deleted.has(match.id) && !byId.has(match.id)) byId.set(match.id, match);
+  });
+  db.matches = [...byId.values()].sort((a, b) =>
+    `${a.season || ""}${a.level}${a.date || ""}${a.time || ""}`.localeCompare(`${b.season || ""}${b.level}${b.date || ""}${b.time || ""}`)
+  );
+  db.meta.seeded2425At = new Date().toISOString();
+  return true;
+}
+
 async function loadDb() {
   await mkdir(DATA_DIR, { recursive: true });
   await seedPersistentDb();
@@ -412,7 +490,9 @@ async function loadDb() {
   }
   const text = await readFile(DB_PATH, "utf8");
   const db = JSON.parse(text.replace(/^\uFEFF/, ""));
-  if (ensureBaseShape(db)) {
+  const changedShape = ensureBaseShape(db);
+  const changedSeed = await mergeBundledSeasonSeed(db);
+  if (changedShape || changedSeed) {
     db.meta.migratedAt = new Date().toISOString();
     await saveDb(db);
   }
@@ -767,6 +847,8 @@ async function api(req, res, url) {
       return;
     }
     await backupDb(`apagar-jogo-${matchId}`);
+    db.deletedMatchIds ||= [];
+    if (!db.deletedMatchIds.includes(matchId)) db.deletedMatchIds.push(matchId);
     db.matches = db.matches.filter((item) => item.id !== matchId);
     db.events = (db.events || []).filter((event) => event.matchId !== matchId);
     delete db.matchReports?.[matchId];
