@@ -789,7 +789,15 @@ async function api(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/live") {
     const body = await readBody(req);
-    db.live = { ...(db.live || {}), ...body, updatedAt: new Date().toISOString() };
+    if (body.reset && body.matchId) {
+      db.events = (db.events || []).filter((event) => event.matchId !== body.matchId);
+      db.liveGames ||= {};
+      delete db.liveGames[body.matchId];
+      if (db.live?.matchId === body.matchId) db.live = null;
+    }
+    const baseLive = body.reset ? {} : db.live || {};
+    db.live = { ...baseLive, ...body, updatedAt: new Date().toISOString() };
+    delete db.live.reset;
     if (!db.live.status) db.live.status = "Em direto";
     ensureLiveGames(db);
     db.hiddenLiveGames = (db.hiddenLiveGames || []).filter((id) => id !== db.live.matchId);
