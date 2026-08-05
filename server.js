@@ -187,6 +187,49 @@ function ensureBaseShape(db) {
       }
     }
   }
+  const deleted = new Set(db.deletedMatchIds || []);
+  const beforeMatches = db.matches.length;
+  db.matches = db.matches.filter((match) => !deleted.has(match.id));
+  if (db.matches.length !== beforeMatches) changed = true;
+
+  const matchIds = new Set(db.matches.map((match) => match.id));
+  for (const matchId of Object.keys(db.matchReports || {})) {
+    if (!matchIds.has(matchId) || deleted.has(matchId)) {
+      delete db.matchReports[matchId];
+      changed = true;
+    }
+  }
+  const beforeEvents = db.events.length;
+  db.events = db.events.filter((event) => matchIds.has(event.matchId) && !deleted.has(event.matchId));
+  if (db.events.length !== beforeEvents) changed = true;
+
+  for (const matchId of Object.keys(db.liveGames || {})) {
+    if (!matchIds.has(matchId) || deleted.has(matchId)) {
+      delete db.liveGames[matchId];
+      changed = true;
+    }
+  }
+  const beforeHidden = db.hiddenLiveGames.length;
+  db.hiddenLiveGames = db.hiddenLiveGames.filter((matchId) => matchIds.has(matchId) && !deleted.has(matchId));
+  if (db.hiddenLiveGames.length !== beforeHidden) changed = true;
+
+  if (db.live?.matchId && (!matchIds.has(db.live.matchId) || deleted.has(db.live.matchId))) {
+    db.live = null;
+    changed = true;
+  }
+
+  if (db.zerozero?.matches) {
+    const beforeZerozero = db.zerozero.matches.length;
+    db.zerozero.matches = db.zerozero.matches.filter((match) => matchIds.has(match.id) && !deleted.has(match.id));
+    if (db.zerozero.matches.length !== beforeZerozero) changed = true;
+  }
+  if (db.zerozero?.seasons) {
+    for (const season of Object.keys(db.zerozero.seasons)) {
+      const beforeSeason = db.zerozero.seasons[season].length;
+      db.zerozero.seasons[season] = db.zerozero.seasons[season].filter((match) => matchIds.has(match.id) && !deleted.has(match.id));
+      if (db.zerozero.seasons[season].length !== beforeSeason) changed = true;
+    }
+  }
   return changed;
 }
 
