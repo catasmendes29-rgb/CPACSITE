@@ -38,8 +38,33 @@ function decodeHtml(value) {
     .replace(/&nbsp;/g, " ");
 }
 
+function fixMojibake(value) {
+  let text = String(value || "");
+  const replacements = {
+    "ÃƒÂ¡": "á", "ÃƒÂÁ": "Á",
+    "ÃƒÂ©": "é", "ÃƒÂ‰": "É",
+    "ÃƒÂ­": "í", "ÃƒÂÍ": "Í",
+    "ÃƒÂ³": "ó", "ÃƒÂ“": "Ó",
+    "ÃƒÂº": "ú", "ÃƒÂš": "Ú",
+    "ÃƒÂ¢": "â", "ÃƒÂª": "ê", "ÃƒÂ´": "ô",
+    "ÃƒÂ£": "ã", "ÃƒÂµ": "õ",
+    "ÃƒÂ§": "ç", "ÃƒÂ‡": "Ç",
+  };
+  for (const [bad, good] of Object.entries(replacements)) text = text.replaceAll(bad, good);
+  try {
+    for (let i = 0; i < 3 && /[ÃÂâ]/.test(text); i += 1) {
+      const fixed = Buffer.from(text, "latin1").toString("utf8").replace(/\uFFFD/g, "").trim();
+      if (!fixed || fixed === text) break;
+      text = fixed;
+    }
+    return text;
+  } catch {
+    return text;
+  }
+}
+
 function stripTags(value) {
-  return decodeHtml(String(value || "").replace(/<[^>]+>/g, " "))
+  return fixMojibake(decodeHtml(String(value || "").replace(/<[^>]+>/g, " ")))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -92,9 +117,11 @@ function parseMatches(html, team, epocaId) {
   return matches;
 }
 
-function mergeMatches(existing = [], incoming = []) {
+function mergeMatches(existing = [], incoming = [], deletedIds = []) {
+  const deleted = new Set(deletedIds);
   const byId = new Map(existing.map((match) => [match.id, match]));
   incoming.forEach((match) => {
+    if (deleted.has(match.id)) return;
     byId.set(match.id, { ...(byId.get(match.id) || {}), ...match });
   });
   return [...byId.values()].sort((a, b) =>
@@ -139,8 +166,12 @@ export async function syncZerozeroResults(db, options = {}) {
   for (const item of seasons) {
     results.push(await fetchZerozeroMatches({ season: item, levels }));
   }
-  const matches = results.flatMap((result) => result.matches);
-  const seasonsByLabel = Object.fromEntries(results.map((result) => [result.season, result.matches]));
+  const deleted = new Set(db.deletedMatchIds || []);
+  const matches = results.flatMap((result) => result.matches).filter((match) => !deleted.has(match.id));
+  const seasonsByLabel = Object.fromEntries(results.map((result) => [
+    result.season,
+    result.matches.filter((match) => !deleted.has(match.id)),
+  ]));
   const nextDb = {
     ...db,
     zerozero: {
@@ -159,7 +190,7 @@ export async function syncZerozeroResults(db, options = {}) {
     },
   };
   if (!dryRun && updateResults) {
-    nextDb.matches = mergeMatches(db.matches, matches);
+    nextDb.matches = mergeMatches(db.matches, matches, db.deletedMatchIds || []);
   }
   return {
     db: dryRun ? db : nextDb,
