@@ -1130,6 +1130,7 @@ async function activateSelectedMatch() {
     method: "POST",
     body: JSON.stringify({
       matchId: state.selectedMatch.id,
+      reset: true,
       period: "Pre-jogo",
       homeScore: 0,
       awayScore: 0,
