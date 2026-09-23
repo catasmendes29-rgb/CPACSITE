@@ -134,6 +134,9 @@ function ensureBaseShape(db) {
   let changed = false;
   db.meta ||= { club: "Casa Pia AC" };
   db.teams ||= [];
+  const previousTeamCount = db.teams.length;
+  db.teams = db.teams.filter((team) => !isSenior(team.level));
+  if (db.teams.length !== previousTeamCount) changed = true;
   db.players ||= [];
   db.matches ||= [];
   db.events ||= [];
@@ -141,12 +144,18 @@ function ensureBaseShape(db) {
   db.liveGames ||= {};
   db.hiddenLiveGames ||= [];
   db.deletedMatchIds ||= [];
+  for (const live of Object.values({ ...db.liveGames, ...(db.live?.matchId ? { [db.live.matchId]: db.live } : {}) })) {
+    const match = db.matches.find((item) => item.id === live.matchId);
+    if (live.liveEnded && match && !match.resultSource && match.status !== "finished") {
+      saveFinalResult(db, live);
+      changed = true;
+    }
+  }
   const requiredTeams = [
     { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
     { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
     { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
     { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-    { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
   ];
   for (const team of requiredTeams) {
     if (!db.teams.some((item) => item.level === team.level)) {
@@ -338,7 +347,6 @@ async function importWorkbookLegacy() {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -433,7 +441,6 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -450,7 +457,11 @@ function preserveAppData(imported, current) {
   const preservedMatches = (current.matches || [])
     .filter((match) => !deleted.has(match.id))
     .filter((match) => !importedIds.has(match.id))
-    .filter((match) => match.source === "ZEROZERO" || match.season !== EXCEL_DEFAULT_SEASON);
+    .filter((match) => match.resultSource === "delegate" || match.source === "ZEROZERO" || match.season !== EXCEL_DEFAULT_SEASON);
+  imported.matches = imported.matches.map((match) => {
+    const saved = current.matches.find((item) => item.id === match.id && item.resultSource === "delegate");
+    return saved ? { ...match, goalsFor: saved.goalsFor, goalsAgainst: saved.goalsAgainst, status: saved.status, resultSource: saved.resultSource } : match;
+  });
   return {
     ...imported,
     matches: [...(imported.matches || []), ...preservedMatches],
@@ -543,6 +554,7 @@ async function loadDb() {
 }
 
 async function saveDb(db) {
+  db.teams = (db.teams || []).filter((team) => !isSenior(team.level));
   db.meta.updatedAt = new Date().toISOString();
   await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
 }
@@ -585,6 +597,20 @@ function ensureLiveGames(db) {
   return db.liveGames;
 }
 
+function isSenior(level) {
+  return String(level || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes("senior");
+}
+
+function saveFinalResult(db, live) {
+  if (!live?.liveEnded) return;
+  const match = db.matches.find((item) => item.id === live.matchId);
+  if (!match) return;
+  const goalsFor = Number(live.homeScore ?? 0);
+  const goalsAgainst = Number(live.awayScore ?? 0);
+  if (![goalsFor, goalsAgainst].every((score) => Number.isInteger(score) && score >= 0)) return;
+  Object.assign(match, { goalsFor, goalsAgainst, status: "finished", resultSource: "delegate" });
+}
+
 function applyEventToLive(db, event) {
   ensureLiveGames(db);
   const live = db.liveGames[event.matchId] || db.live;
@@ -620,6 +646,7 @@ function recomputeLiveFromEvents(db, matchId) {
   live.updatedAt = new Date().toISOString();
   db.liveGames ||= {};
   db.liveGames[matchId] = live;
+  saveFinalResult(db, live);
   if (db.live?.matchId === matchId) db.live = live;
 }
 
@@ -795,7 +822,12 @@ async function api(req, res, url) {
       delete db.liveGames[body.matchId];
       if (db.live?.matchId === body.matchId) db.live = null;
     }
-    const baseLive = body.reset ? {} : db.live || {};
+    const matchId = body.matchId || db.live?.matchId;
+    if (!db.matches.some((match) => match.id === matchId && !isSenior(match.level))) {
+      send(res, 400, { error: "Jogo invalido." });
+      return;
+    }
+    const baseLive = body.reset ? {} : db.liveGames?.[matchId] || (db.live?.matchId === matchId ? db.live : {}) || {};
     db.live = { ...baseLive, ...body, updatedAt: new Date().toISOString() };
     delete db.live.reset;
     if (!db.live.status) db.live.status = "Em direto";
@@ -804,6 +836,7 @@ async function api(req, res, url) {
     if (db.live.matchId) {
       db.liveGames[db.live.matchId] = db.live;
     }
+    saveFinalResult(db, db.live);
     await saveDb(db);
     send(res, 200, { live: db.live, currentMatch: currentMatch(db) });
     return;
