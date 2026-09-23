@@ -122,6 +122,7 @@ function mergeMatches(existing = [], incoming = [], deletedIds = []) {
   const byId = new Map(existing.map((match) => [match.id, match]));
   incoming.forEach((match) => {
     if (deleted.has(match.id)) return;
+    if (byId.get(match.id)?.resultSource === "delegate") return;
     byId.set(match.id, { ...(byId.get(match.id) || {}), ...match });
   });
   return [...byId.values()].sort((a, b) =>
