@@ -15,10 +15,10 @@ const SOURCE_DIR =
   "C:/Users/catas/OneDrive - Universidade do Algarve/Ambiente de Trabalho/CASA PIA AC";
 const SOURCE_XLSX =
   process.env.CASA_PIA_XLSX || path.join(SOURCE_DIR, "Casa pia.xlsx");
-const DEFAULT_SOURCE_XLSX_URL =
-  "https://docs.google.com/spreadsheets/d/1nQnhwHzXcjsOqRvEyl19ipSWQfxIaJ5O/export?format=xlsx";
+const DEFAULT_SOURCE_XLSX_URL = "";
 const SOURCE_XLSX_URL = process.env.CASA_PIA_XLSX_URL || DEFAULT_SOURCE_XLSX_URL;
 const AUTO_SYNC_MINUTES = Number(process.env.CASA_PIA_AUTO_SYNC_MINUTES || 0);
+const EXCEL_URL_SYNC_ENABLED = String(process.env.CASA_PIA_ENABLE_EXCEL_URL_SYNC || "0") === "1";
 const ZEROZERO_AUTO_SYNC_MINUTES = Number(process.env.ZEROZERO_AUTO_SYNC_MINUTES || 0);
 const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024/2025";
 const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
@@ -593,6 +593,12 @@ async function importWorkbookUrl(url = SOURCE_XLSX_URL) {
 }
 
 async function syncFromConfiguredUrl(currentDb) {
+  if (!EXCEL_URL_SYNC_ENABLED) {
+    throw new Error("Sincronizacao Excel URL desativada para evitar repor a base antiga. Define CASA_PIA_ENABLE_EXCEL_URL_SYNC=1 apenas se quiseres voltar a usar esse link.");
+  }
+  if (currentDb.meta?.sportsRecordsResetVersion === SPORTS_RESET_VERSION) {
+    throw new Error("Base 26/27 ativa: a sincronizacao Excel URL antiga esta bloqueada para nao repor resultados e jogadoras antigos.");
+  }
   const imported = await importWorkbookUrl();
   const db = preserveAppData(imported, currentDb);
   db.meta.importedAt = new Date().toISOString();
@@ -858,6 +864,10 @@ async function api(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/reload-source") {
+    if (db.meta?.sportsRecordsResetVersion === SPORTS_RESET_VERSION) {
+      send(res, 409, { error: "Base 26/27 ativa: recarregar o Excel local antigo esta bloqueado." });
+      return;
+    }
     db = preserveAppData(await importWorkbook(), db);
     await saveDb(db);
     send(res, 200, { ...db, currentMatch: currentMatch(db) });
@@ -883,8 +893,8 @@ async function api(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/sync-status") {
     send(res, 200, {
-      configured: Boolean(SOURCE_XLSX_URL),
-      autoSyncMinutes: AUTO_SYNC_MINUTES,
+      configured: Boolean(SOURCE_XLSX_URL && EXCEL_URL_SYNC_ENABLED),
+      autoSyncMinutes: EXCEL_URL_SYNC_ENABLED ? AUTO_SYNC_MINUTES : 0,
       lastSync,
       zerozero: {
         configured: true,
@@ -1143,7 +1153,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 function startAutoSync() {
-  if (!SOURCE_XLSX_URL || !AUTO_SYNC_MINUTES) return;
+  if (!SOURCE_XLSX_URL || !AUTO_SYNC_MINUTES || !EXCEL_URL_SYNC_ENABLED) return;
   const run = async () => {
     try {
       const db = await loadDb();
@@ -1183,7 +1193,8 @@ function startZerozeroAutoSync() {
 server.listen(PORT, () => {
   console.log(`Casa Pia Live disponível em http://localhost:${PORT}`);
   console.log(`Fonte de dados: ${SOURCE_DIR}`);
-  if (SOURCE_XLSX_URL) console.log(`Sincronização Excel URL ativa: ${AUTO_SYNC_MINUTES || "manual"} min`);
+  if (SOURCE_XLSX_URL && EXCEL_URL_SYNC_ENABLED) console.log(`Sincronização Excel URL ativa: ${AUTO_SYNC_MINUTES || "manual"} min`);
+  if (SOURCE_XLSX_URL && !EXCEL_URL_SYNC_ENABLED) console.log("Sincronização Excel URL bloqueada para preservar a base 26/27.");
   if (ZEROZERO_AUTO_SYNC_MINUTES) console.log(`Sincronização ZeroZero ativa: ${ZEROZERO_AUTO_SYNC_MINUTES} min`);
   startAutoSync();
   startZerozeroAutoSync();
