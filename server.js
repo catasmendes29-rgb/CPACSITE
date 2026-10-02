@@ -23,7 +23,7 @@ const ZEROZERO_AUTO_SYNC_MINUTES = Number(process.env.ZEROZERO_AUTO_SYNC_MINUTES
 const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024/2025";
 const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
 const EXCEL_DEFAULT_SEASON = process.env.CASA_PIA_EXCEL_SEASON || "2025/2026";
-const SPORTS_RESET_VERSION = "bd26_27_2026_10_02";
+const SPORTS_RESET_VERSION = "bd26_27_2026_10_02_photo_links_v3";
 let lastSync = null;
 let lastZerozeroSync = null;
 
@@ -103,6 +103,15 @@ function firstUrlFromRecord(record) {
     if (match) return match[0].replaceAll("&amp;", "&");
   }
   return "";
+}
+
+function firstUrl(value) {
+  const match = String(value || "").match(/https?:\/\/\S+/i);
+  return match ? match[0].replaceAll("&amp;", "&") : "";
+}
+
+function isDirectPhotoUrl(url) {
+  return /imagehandler|\.((png)|(jpe?g)|(webp)|(gif)|(svg))($|[?#])/i.test(String(url || ""));
 }
 
 function hasWorkbookSheet(workbook, sheetName) {
@@ -402,9 +411,14 @@ function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xl
       if (seen.has(key)) continue;
       seen.add(key);
 
-      const rawLink = String(pickByNormalizedHeader(record, ["link", "foto", "fotografia", "url", "link foto"]) || "").trim();
-      const linkMatch = rawLink.match(/https?:\/\/\S+/i);
-      const link = String((linkMatch ? linkMatch[0] : firstUrlFromRecord(record)) || "")
+      const rawProfileLink = String(pickByNormalizedHeader(record, ["link", "perfil", "ficha", "ficha fpf", "link ficha"]) || "").trim();
+      const rawPhotoLink = String(pickByNormalizedHeader(record, ["foto", "fotografia", "imagem", "url foto", "link foto"]) || "").trim();
+      const urlFromLink = firstUrl(rawProfileLink);
+      const urlFromPhoto = firstUrl(rawPhotoLink);
+      const anyUrl = firstUrlFromRecord(record);
+      const profileUrl = isDirectPhotoUrl(urlFromLink) ? "" : (urlFromLink || (!isDirectPhotoUrl(anyUrl) ? anyUrl : ""));
+      const photoUrl = urlFromPhoto || (isDirectPhotoUrl(urlFromLink) ? urlFromLink : "");
+      const link = String(profileUrl || "")
         .trim()
         .replaceAll("&amp;", "&");
       const position = cleanStoredText(pickByNormalizedHeader(record, ["Posição", "Posicao"]));
@@ -419,7 +433,7 @@ function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xl
         number: sub13NameOnly ? "" : number,
         position: sub13NameOnly ? "" : position,
         birthYear: sub13NameOnly ? "" : birthYear,
-        photoUrl: !sub13NameOnly && /imagehandler|\.((png)|(jpe?g)|(webp)|(gif))($|[?#])/i.test(link) ? link : "",
+        photoUrl: !sub13NameOnly && isDirectPhotoUrl(photoUrl) ? photoUrl : "",
         profileUrl: sub13NameOnly ? "" : link,
         history: [],
       });
