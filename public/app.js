@@ -29,6 +29,7 @@ const delegateTeams = [
   { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
   { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
   { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+  { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
 ];
 
 async function request(route, options = {}) {
@@ -40,12 +41,7 @@ async function request(route, options = {}) {
     ...options,
   });
   if (!response.ok) throw new Error(await response.text());
-  const data = await response.json();
-  const visible = (item) => !String(item.level || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes("senior");
-  for (const key of ["teams", "matches", "players"]) {
-    if (Array.isArray(data[key])) data[key] = data[key].filter(visible);
-  }
-  return data;
+  return response.json();
 }
 
 function option(label, value = label) {
@@ -483,12 +479,18 @@ function playerPhoto(name) {
   return `/assets/jogadoras/${slugName(name)}.jpg`;
 }
 
+function usablePhotoUrl(url) {
+  const text = String(url || "");
+  return /imagehandler|\.((png)|(jpe?g)|(webp)|(gif)|(svg))($|[?#])/i.test(text);
+}
+
 function playerForName(name, level) {
   return state.db.players.find((player) => player.level === level && player.name === name) || null;
 }
 
 function playerPhotoSrc(name, level) {
-  return playerForName(name, level)?.photoUrl || playerPhoto(name);
+  const player = playerForName(name, level);
+  return usablePhotoUrl(player?.photoUrl) ? player.photoUrl : playerPhoto(name);
 }
 
 function pitchMarkup(names, tactic, total, options = {}) {
@@ -506,7 +508,7 @@ function pitchMarkup(names, tactic, total, options = {}) {
           const name = names[index] || "";
           if (!name) return `<span class="player-dot empty" style="left:${slot.x}%;top:${slot.y}%">+</span>`;
           if (withPhotos) {
-            return `<span class="player-dot photo-dot" style="left:${slot.x}%;top:${slot.y}%"><img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.parentElement.dataset.initials='${initials(name)}'; this.remove();" /><small>${name}</small></span>`;
+            return `<span class="player-dot photo-dot" style="left:${slot.x}%;top:${slot.y}%"><img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" /><small>${name}</small></span>`;
           }
           return `<span class="player-dot" style="left:${slot.x}%;top:${slot.y}%">${name}</span>`;
         })
@@ -519,7 +521,7 @@ function livePlayerCard(name, index, level) {
   return `
     <article class="live-player-card">
       <div class="player-photo">
-        <img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.parentElement.dataset.initials='${initials(name)}'; this.remove();" />
+        <img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" />
       </div>
       <strong>${index + 1}. ${name}</strong>
     </article>
@@ -900,7 +902,7 @@ function renderTeamsPage() {
   $("#teamsGrid").innerHTML = players
     .map((player) => {
       const stats = playerStats(player);
-      const photo = player.photoUrl
+      const photo = usablePhotoUrl(player.photoUrl)
         ? `<img src="${player.photoUrl}" alt="${player.name}" loading="lazy" />`
         : `<span class="player-photo-fallback">${player.name.slice(0, 1)}</span>`;
       return `
@@ -936,9 +938,17 @@ function renderPlayerDetail() {
     `${Number(item.yellows || 0)} CA`,
     `${Number(item.reds || 0)} CV`,
   ]);
-  const photo = player.photoUrl
+  const photo = usablePhotoUrl(player.photoUrl)
     ? `<img src="${player.photoUrl}" alt="${player.name}" />`
     : `<span class="player-photo-fallback large">${player.name.slice(0, 1)}</span>`;
+  const facts = [
+    player.number ? `Nº ${escapeHtml(player.number)}` : "",
+    player.position ? escapeHtml(player.position) : "",
+    player.birthYear ? escapeHtml(player.birthYear) : "",
+  ].filter(Boolean);
+  const profileLink = player.profileUrl
+    ? `<a class="player-profile-link" href="${escapeHtml(player.profileUrl)}" target="_blank" rel="noreferrer">Ficha FPF</a>`
+    : "";
   detail.hidden = false;
   content.innerHTML = `
     <div class="player-profile">
@@ -947,6 +957,7 @@ function renderPlayerDetail() {
         <p class="eyebrow">Histórico da jogadora</p>
         <h2>${player.name}</h2>
         <span>${player.level}</span>
+        ${facts.length || profileLink ? `<small>${facts.join(" · ")} ${profileLink}</small>` : ""}
       </div>
     </div>
     <div class="player-stat-row">
@@ -1085,7 +1096,7 @@ function table(headers, rows) {
   const body = rows.length
     ? rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`).join("")
     : `<tr><td colspan="${headers.length}">Sem dados registados.</td></tr>`;
-  return `<div class="table-wrap"><table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+  return `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
 function historyTable(matches) {
@@ -1627,6 +1638,7 @@ $("#saveManualMatch")?.addEventListener("click", async () => {
     time: $("#manualTime").value,
     goalsFor: $("#manualGoalsFor").value,
     goalsAgainst: $("#manualGoalsAgainst").value,
+    createdBy: state.user?.name || "",
   };
   if (!payload.competition || !payload.opponent) {
     $("#syncStatus").textContent = "Preenche pelo menos a competição e o adversário.";
