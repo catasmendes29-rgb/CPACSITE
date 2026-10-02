@@ -105,6 +105,11 @@ function firstUrlFromRecord(record) {
   return "";
 }
 
+function fpfPhotoUrlFromProfile(url) {
+  const match = String(url || "").match(/playerId\/(\d+)/i);
+  return match ? `https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=${match[1]}&op=t&w=202&h=249` : "";
+}
+
 function hasWorkbookSheet(workbook, sheetName) {
   return workbook.SheetNames.some((name) => normalizeHeader(name) === normalizeHeader(sheetName));
 }
@@ -419,7 +424,7 @@ function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xl
         number: sub13NameOnly ? "" : number,
         position: sub13NameOnly ? "" : position,
         birthYear: sub13NameOnly ? "" : birthYear,
-        photoUrl: !sub13NameOnly && /imagehandler|\.((png)|(jpe?g)|(webp)|(gif))($|[?#])/i.test(link) ? link : "",
+        photoUrl: sub13NameOnly ? "" : (/imagehandler|\.((png)|(jpe?g)|(webp)|(gif))($|[?#])/i.test(link) ? link : fpfPhotoUrlFromProfile(link)),
         profileUrl: sub13NameOnly ? "" : link,
         history: [],
       });
