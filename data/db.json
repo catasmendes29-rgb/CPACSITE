@@ -1,11 +1,11 @@
 {
   "meta": {
     "club": "Casa Pia AC",
-    "createdAt": "2026-10-02T21:33:22.862Z",
+    "createdAt": "2026-10-02T21:49:32.580Z",
     "sourceWorkbook": "C:/Users/catas/OneDrive - Universidade do Algarve/Ambiente de Trabalho/CASA PIA AC/FemininoCasaPia_BD26_27.xlsx",
     "sportsRecordsResetVersion": "bd26_27_2026_10_02",
     "importMode": "players-bd26-27",
-    "note": "Base de jogadoras 26/27 importada ignorando as primeiras 3 linhas de cada folha. Nas Sub13 ficam guardados apenas os nomes. Registos desportivos anteriores foram limpos."
+    "note": "Base de jogadoras 26/27 importada ignorando as primeiras 3 linhas de cada folha. Nas Sub13 ficam guardados apenas os nomes. Links de ficha FPF nao sao usados como fotografia para evitar imagens erradas."
   },
   "teams": [
     {
@@ -867,7 +867,7 @@
       "number": "86",
       "position": "GR",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1841821&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1841821",
       "history": []
     },
@@ -878,7 +878,7 @@
       "number": "10",
       "position": "MO",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2044327&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2044327",
       "history": []
     },
@@ -889,7 +889,7 @@
       "number": "1",
       "position": "GR",
       "birthYear": "2011",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1764761&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1764761",
       "history": []
     },
@@ -911,7 +911,7 @@
       "number": "7",
       "position": "MC",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2204548&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2204548",
       "history": []
     },
@@ -922,7 +922,7 @@
       "number": "9",
       "position": "AV",
       "birthYear": "2011",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2103901&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2103901",
       "history": []
     },
@@ -933,7 +933,7 @@
       "number": "47",
       "position": "DC",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2227714&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2227714",
       "history": []
     },
@@ -944,7 +944,7 @@
       "number": "8",
       "position": "ALA",
       "birthYear": "2007",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1904289&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1904289",
       "history": []
     },
@@ -955,7 +955,7 @@
       "number": "3",
       "position": "DC/MC",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2206044&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2206044",
       "history": []
     },
@@ -966,7 +966,7 @@
       "number": "4",
       "position": "ALA",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1912126&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1912126",
       "history": []
     },
@@ -977,7 +977,7 @@
       "number": "21",
       "position": "ALA",
       "birthYear": "2009",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1896819&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1896819",
       "history": []
     },
@@ -988,7 +988,7 @@
       "number": "7",
       "position": "ALA",
       "birthYear": "2007",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1922705&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1922705",
       "history": []
     },
@@ -999,7 +999,7 @@
       "number": "99",
       "position": "GR",
       "birthYear": "2008",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2054692&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2054692",
       "history": []
     },
@@ -1010,7 +1010,7 @@
       "number": "20",
       "position": "AV",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1849614&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1849614",
       "history": []
     },
@@ -1021,7 +1021,7 @@
       "number": "46",
       "position": "MC",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1963443&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1963443",
       "history": []
     },
@@ -1032,7 +1032,7 @@
       "number": "15",
       "position": "MC",
       "birthYear": "2007",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1833036&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1833036",
       "history": []
     },
@@ -1043,7 +1043,7 @@
       "number": "3",
       "position": "DC",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2066688&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2066688",
       "history": []
     },
@@ -1054,7 +1054,7 @@
       "number": "1",
       "position": "GR",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2090642&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2090642",
       "history": []
     },
@@ -1065,7 +1065,7 @@
       "number": "21",
       "position": "ALA",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2193370&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2193370",
       "history": []
     },
@@ -1076,7 +1076,7 @@
       "number": "41",
       "position": "AV",
       "birthYear": "2011",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2170847&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2170847",
       "history": []
     },
@@ -1087,7 +1087,7 @@
       "number": "6",
       "position": "DC",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=1954896&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/1954896",
       "history": []
     },
@@ -1098,7 +1098,7 @@
       "number": "2",
       "position": "DC",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2342251&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2342251",
       "history": []
     },
@@ -1109,7 +1109,7 @@
       "number": "28",
       "position": "MO/AV",
       "birthYear": "2012",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2041320&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2041320",
       "history": []
     },
@@ -1120,7 +1120,7 @@
       "number": "14",
       "position": "MC",
       "birthYear": "2011",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2041058&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2041058",
       "history": []
     },
@@ -1142,7 +1142,7 @@
       "number": "85",
       "position": "MC",
       "birthYear": "2010",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2059870&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2059870",
       "history": []
     },
@@ -1153,7 +1153,7 @@
       "number": "17",
       "position": "AV",
       "birthYear": "2011",
-      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=2277649&op=t&w=202&h=249",
+      "photoUrl": "",
       "profileUrl": "https://www.fpf.pt/pt/Jogadores/Ficha-de-Jogador/playerId/2277649",
       "history": []
     }
