@@ -661,21 +661,35 @@ async function applyBundledSportsReset(db) {
   const resetVersion = bundled.meta?.sportsRecordsResetVersion;
   if (!resetVersion || db.meta?.sportsRecordsResetVersion === resetVersion) return false;
 
+  const deleted = new Set(db.deletedMatchIds || []);
+  const manualMatches = (db.matches || []).filter((match) => match.source === "MANUAL" && !deleted.has(match.id));
+  const manualMatchIds = new Set(manualMatches.map((match) => match.id));
+  const manualReports = Object.fromEntries(
+    Object.entries(db.matchReports || {}).filter(([matchId]) => manualMatchIds.has(matchId))
+  );
+  const manualLiveGames = Object.fromEntries(
+    Object.entries(db.liveGames || {}).filter(([matchId]) => manualMatchIds.has(matchId))
+  );
+  const manualEvents = (db.events || []).filter((event) => manualMatchIds.has(event.matchId));
+  const manualHiddenLiveGames = (db.hiddenLiveGames || []).filter((matchId) => manualMatchIds.has(matchId));
+  const manualLive = db.live?.matchId && manualMatchIds.has(db.live.matchId) ? db.live : null;
+
   db.meta = {
     ...(db.meta || {}),
     ...(bundled.meta || {}),
     sportsRecordsResetVersion: resetVersion,
     sportsRecordsResetAppliedAt: new Date().toISOString(),
+    manualMatchesPreserved: manualMatches.length,
   };
   db.teams = bundled.teams || [];
   db.players = bundled.players || [];
-  db.matches = bundled.matches || [];
-  db.events = [];
-  db.matchReports = {};
-  db.live = null;
-  db.liveGames = {};
-  db.hiddenLiveGames = [];
-  db.deletedMatchIds = [];
+  db.matches = [...(bundled.matches || []), ...manualMatches];
+  db.events = manualEvents;
+  db.matchReports = manualReports;
+  db.live = manualLive;
+  db.liveGames = manualLiveGames;
+  db.hiddenLiveGames = manualHiddenLiveGames;
+  db.deletedMatchIds = [...deleted];
   db.zerozero = {};
   return true;
 }
@@ -1114,6 +1128,8 @@ async function api(req, res, url) {
       goalsAgainst,
       status: goalsFor === null || goalsAgainst === null ? "scheduled" : "finished",
       source: "MANUAL",
+      createdBy: String(body.createdBy || "").trim(),
+      createdAt: db.matches.find((item) => item.id === id)?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     const index = db.matches.findIndex((item) => item.id === id);
