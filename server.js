@@ -23,7 +23,7 @@ const ZEROZERO_AUTO_SYNC_MINUTES = Number(process.env.ZEROZERO_AUTO_SYNC_MINUTES
 const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024/2025";
 const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
 const EXCEL_DEFAULT_SEASON = process.env.CASA_PIA_EXCEL_SEASON || "2025/2026";
-const SPORTS_RESET_VERSION = "bd26_27_2026_10_02_photo_links_v3";
+const SPORTS_RESET_VERSION = "bd26_27_2026_10_02_photo_links_no_seniores_v4";
 let lastSync = null;
 let lastZerozeroSync = null;
 
@@ -68,7 +68,6 @@ function cleanLevel(value) {
   if (text.includes("15")) return "Sub15";
   if (text.includes("17")) return "Sub17";
   if (text.includes("19")) return "Sub19";
-  if (text.includes("senior")) return "Seniores";
   return String(value || "").trim();
 }
 
@@ -186,7 +185,6 @@ function ensureBaseShape(db) {
     { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
     { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
     { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-    { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
   ];
   for (const team of requiredTeams) {
     if (!db.teams.some((item) => item.level === team.level)) {
@@ -378,7 +376,6 @@ async function importWorkbookLegacy() {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -391,7 +388,7 @@ async function importWorkbookLegacy() {
 function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xlsx") {
   const players = [];
   const seen = new Set();
-  const knownLevels = ["Sub13", "Sub15", "Sub17", "Sub19", "Seniores"];
+  const knownLevels = ["Sub13", "Sub15", "Sub17", "Sub19"];
   const sheets = workbook.SheetNames.filter((sheetName) => {
     const level = cleanLevel(sheetName);
     return knownLevels.includes(level);
@@ -454,7 +451,6 @@ function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xl
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches: [],
@@ -556,7 +552,6 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -662,7 +657,8 @@ async function applyBundledSportsReset(db) {
   if (!resetVersion || db.meta?.sportsRecordsResetVersion === resetVersion) return false;
 
   const deleted = new Set(db.deletedMatchIds || []);
-  const manualMatches = (db.matches || []).filter((match) => match.source === "MANUAL" && !deleted.has(match.id));
+  const allowedLevels = new Set((bundled.teams || []).map((team) => team.level));
+  const manualMatches = (db.matches || []).filter((match) => match.source === "MANUAL" && allowedLevels.has(match.level) && !deleted.has(match.id));
   const manualMatchIds = new Set(manualMatches.map((match) => match.id));
   const manualReports = Object.fromEntries(
     Object.entries(db.matchReports || {}).filter(([matchId]) => manualMatchIds.has(matchId))
