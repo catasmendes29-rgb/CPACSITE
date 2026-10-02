@@ -29,7 +29,6 @@ const delegateTeams = [
   { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
   { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
   { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-  { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
 ];
 
 async function request(route, options = {}) {
