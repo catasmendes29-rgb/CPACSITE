@@ -23,6 +23,7 @@ const ZEROZERO_AUTO_SYNC_MINUTES = Number(process.env.ZEROZERO_AUTO_SYNC_MINUTES
 const ZEROZERO_AUTO_SYNC_SEASON = process.env.ZEROZERO_AUTO_SYNC_SEASON || "2024/2025";
 const ZEROZERO_AUTO_SYNC_UNTIL_CURRENT = String(process.env.ZEROZERO_AUTO_SYNC_UNTIL_CURRENT || "1") === "1";
 const EXCEL_DEFAULT_SEASON = process.env.CASA_PIA_EXCEL_SEASON || "2025/2026";
+const SPORTS_RESET_VERSION = "bd26_27_2026_10_02";
 let lastSync = null;
 let lastZerozeroSync = null;
 
@@ -76,6 +77,36 @@ function pick(record, keys) {
     if (record[key] !== undefined) return record[key];
   }
   return null;
+}
+
+function normalizeHeader(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function pickByNormalizedHeader(record, candidates) {
+  const wanted = candidates.map(normalizeHeader);
+  for (const [key, value] of Object.entries(record)) {
+    const normalized = normalizeHeader(key);
+    if (wanted.includes(normalized)) return value;
+  }
+  return null;
+}
+
+function firstUrlFromRecord(record) {
+  for (const value of Object.values(record)) {
+    const match = String(value || "").match(/https?:\/\/\S+/i);
+    if (match) return match[0].replaceAll("&amp;", "&");
+  }
+  return "";
+}
+
+function hasWorkbookSheet(workbook, sheetName) {
+  return workbook.SheetNames.some((name) => normalizeHeader(name) === normalizeHeader(sheetName));
 }
 
 function playerId(level, name) {
@@ -134,9 +165,6 @@ function ensureBaseShape(db) {
   let changed = false;
   db.meta ||= { club: "Casa Pia AC" };
   db.teams ||= [];
-  const previousTeamCount = db.teams.length;
-  db.teams = db.teams.filter((team) => !isSenior(team.level));
-  if (db.teams.length !== previousTeamCount) changed = true;
   db.players ||= [];
   db.matches ||= [];
   db.events ||= [];
@@ -144,18 +172,12 @@ function ensureBaseShape(db) {
   db.liveGames ||= {};
   db.hiddenLiveGames ||= [];
   db.deletedMatchIds ||= [];
-  for (const live of Object.values({ ...db.liveGames, ...(db.live?.matchId ? { [db.live.matchId]: db.live } : {}) })) {
-    const match = db.matches.find((item) => item.id === live.matchId);
-    if (live.liveEnded && match && !match.resultSource && match.status !== "finished") {
-      saveFinalResult(db, live);
-      changed = true;
-    }
-  }
   const requiredTeams = [
     { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
     { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
     { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
     { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+    { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
   ];
   for (const team of requiredTeams) {
     if (!db.teams.some((item) => item.level === team.level)) {
@@ -347,11 +369,87 @@ async function importWorkbookLegacy() {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
     matchReports: {},
     live: null,
+    events: [],
+  };
+}
+
+function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xlsx") {
+  const players = [];
+  const seen = new Set();
+  const knownLevels = ["Sub13", "Sub15", "Sub17", "Sub19", "Seniores"];
+  const sheets = workbook.SheetNames.filter((sheetName) => {
+    const level = cleanLevel(sheetName);
+    return knownLevels.includes(level);
+  });
+
+  for (const sheetName of sheets) {
+    const level = cleanLevel(sheetName);
+    const rows = sheetRows(sheetName);
+    if (rows.length < 5) continue;
+    const headers = (rows[3] || []).map((header, index) => String(header || `Coluna ${index + 1}`).trim());
+    for (const row of rows.slice(4)) {
+      if (!row.some((cell) => cell !== null && cell !== "")) continue;
+      const record = Object.fromEntries(headers.map((header, index) => [header || `col${index}`, row[index] ?? ""]));
+      const name = cleanStoredText(pickByNormalizedHeader(record, ["Nome", "Jogadora", "Jogadoras", "Atleta"]));
+      if (!name || name.toLowerCase() === "nome") continue;
+      const key = `${level}_${playerKey(name)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const rawLink = String(pickByNormalizedHeader(record, ["link", "foto", "fotografia", "url", "link foto"]) || "").trim();
+      const linkMatch = rawLink.match(/https?:\/\/\S+/i);
+      const link = String((linkMatch ? linkMatch[0] : firstUrlFromRecord(record)) || "")
+        .trim()
+        .replaceAll("&amp;", "&");
+      const position = cleanStoredText(pickByNormalizedHeader(record, ["Posição", "Posicao"]));
+      const number = String(pickByNormalizedHeader(record, ["Nº Camisola", "No Camisola", "Numero Camisola", "Número Camisola"]) || "").trim();
+      const birthYear = String(pickByNormalizedHeader(record, ["Ano", "Ano Nascimento"]) || "").trim();
+
+      const sub13NameOnly = level === "Sub13";
+      players.push({
+        id: playerId(level, name),
+        level,
+        name,
+        number: sub13NameOnly ? "" : number,
+        position: sub13NameOnly ? "" : position,
+        birthYear: sub13NameOnly ? "" : birthYear,
+        photoUrl: !sub13NameOnly && /imagehandler|\.((png)|(jpe?g)|(webp)|(gif))($|[?#])/i.test(link) ? link : "",
+        profileUrl: sub13NameOnly ? "" : link,
+        history: [],
+      });
+    }
+  }
+
+  return {
+    meta: {
+      club: "Casa Pia AC",
+      createdAt: new Date().toISOString(),
+      sourceWorkbook: filename,
+      sportsRecordsResetVersion: SPORTS_RESET_VERSION,
+      importMode: "players-bd26-27",
+      note: "Base de jogadoras 26/27 importada ignorando as primeiras 3 linhas de cada folha. Registos desportivos anteriores foram limpos.",
+    },
+    teams: [
+      { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
+      { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
+      { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
+      { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
+    ],
+    players,
+    matches: [],
+    matchReports: {},
+    live: null,
+    liveGames: {},
+    hiddenLiveGames: [],
+    deletedMatchIds: [],
+    zerozero: {},
     events: [],
   };
 }
@@ -367,6 +465,9 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
     const sheet = workbook.Sheets[sheetName];
     return sheet ? XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null }) : [];
   };
+  if (!hasWorkbookSheet(workbook, "TUDO")) {
+    return importPlayerDatabaseWorkbook(workbook, sheetRows, filename);
+  }
   const photoRows = sheetRows("Plantel");
   const photoMap = new Map();
   for (const row of photoRows.slice(1)) {
@@ -441,6 +542,7 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
       { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
       { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
       { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
+      { level: "Seniores", format: 11, label: "Seniores Futebol 11" },
     ],
     players,
     matches,
@@ -451,17 +553,22 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
 }
 
 function preserveAppData(imported, current) {
+  if (imported.meta?.sportsRecordsResetVersion) {
+    return {
+      ...imported,
+      meta: {
+        ...(imported.meta || {}),
+        previousDatabaseUpdatedAt: current.meta?.updatedAt || null,
+      },
+    };
+  }
   const deleted = new Set(current.deletedMatchIds || []);
   imported.matches = (imported.matches || []).filter((match) => !deleted.has(match.id));
   const importedIds = new Set((imported.matches || []).map((match) => match.id));
   const preservedMatches = (current.matches || [])
     .filter((match) => !deleted.has(match.id))
     .filter((match) => !importedIds.has(match.id))
-    .filter((match) => match.resultSource === "delegate" || match.source === "ZEROZERO" || match.season !== EXCEL_DEFAULT_SEASON);
-  imported.matches = imported.matches.map((match) => {
-    const saved = current.matches.find((item) => item.id === match.id && item.resultSource === "delegate");
-    return saved ? { ...match, goalsFor: saved.goalsFor, goalsAgainst: saved.goalsAgainst, status: saved.status, resultSource: saved.resultSource } : match;
-  });
+    .filter((match) => match.source === "ZEROZERO" || match.season !== EXCEL_DEFAULT_SEASON);
   return {
     ...imported,
     matches: [...(imported.matches || []), ...preservedMatches],
@@ -510,6 +617,7 @@ async function mergeBundledSeasonSeed(db) {
   const bundledDb = path.join(__dirname, "data", "db.json");
   if (bundledDb === DB_PATH || !(await exists(bundledDb))) return false;
   const bundled = JSON.parse((await readFile(bundledDb, "utf8")).replace(/^\uFEFF/, ""));
+  if (bundled.meta?.sportsRecordsResetVersion) return false;
   const seedMatches = (bundled.matches || []).filter((match) => match.season === "2024/2025");
   if (!seedMatches.length) return false;
   const current2425 = (db.matches || []).filter((match) => match.season === "2024/2025").length;
@@ -523,6 +631,32 @@ async function mergeBundledSeasonSeed(db) {
     `${a.season || ""}${a.level}${a.date || ""}${a.time || ""}`.localeCompare(`${b.season || ""}${b.level}${b.date || ""}${b.time || ""}`)
   );
   db.meta.seeded2425At = new Date().toISOString();
+  return true;
+}
+
+async function applyBundledSportsReset(db) {
+  const bundledDb = path.join(__dirname, "data", "db.json");
+  if (bundledDb === DB_PATH || !(await exists(bundledDb))) return false;
+  const bundled = JSON.parse((await readFile(bundledDb, "utf8")).replace(/^\uFEFF/, ""));
+  const resetVersion = bundled.meta?.sportsRecordsResetVersion;
+  if (!resetVersion || db.meta?.sportsRecordsResetVersion === resetVersion) return false;
+
+  db.meta = {
+    ...(db.meta || {}),
+    ...(bundled.meta || {}),
+    sportsRecordsResetVersion: resetVersion,
+    sportsRecordsResetAppliedAt: new Date().toISOString(),
+  };
+  db.teams = bundled.teams || [];
+  db.players = bundled.players || [];
+  db.matches = bundled.matches || [];
+  db.events = [];
+  db.matchReports = {};
+  db.live = null;
+  db.liveGames = {};
+  db.hiddenLiveGames = [];
+  db.deletedMatchIds = [];
+  db.zerozero = {};
   return true;
 }
 
@@ -544,9 +678,10 @@ async function loadDb() {
   }
   const text = await readFile(DB_PATH, "utf8");
   const db = JSON.parse(text.replace(/^\uFEFF/, ""));
+  const changedReset = await applyBundledSportsReset(db);
   const changedShape = ensureBaseShape(db);
   const changedSeed = await mergeBundledSeasonSeed(db);
-  if (changedShape || changedSeed) {
+  if (changedReset || changedShape || changedSeed) {
     db.meta.migratedAt = new Date().toISOString();
     await saveDb(db);
   }
@@ -554,7 +689,6 @@ async function loadDb() {
 }
 
 async function saveDb(db) {
-  db.teams = (db.teams || []).filter((team) => !isSenior(team.level));
   db.meta.updatedAt = new Date().toISOString();
   await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
 }
@@ -597,20 +731,6 @@ function ensureLiveGames(db) {
   return db.liveGames;
 }
 
-function isSenior(level) {
-  return String(level || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes("senior");
-}
-
-function saveFinalResult(db, live) {
-  if (!live?.liveEnded) return;
-  const match = db.matches.find((item) => item.id === live.matchId);
-  if (!match) return;
-  const goalsFor = Number(live.homeScore ?? 0);
-  const goalsAgainst = Number(live.awayScore ?? 0);
-  if (![goalsFor, goalsAgainst].every((score) => Number.isInteger(score) && score >= 0)) return;
-  Object.assign(match, { goalsFor, goalsAgainst, status: "finished", resultSource: "delegate" });
-}
-
 function applyEventToLive(db, event) {
   ensureLiveGames(db);
   const live = db.liveGames[event.matchId] || db.live;
@@ -646,7 +766,6 @@ function recomputeLiveFromEvents(db, matchId) {
   live.updatedAt = new Date().toISOString();
   db.liveGames ||= {};
   db.liveGames[matchId] = live;
-  saveFinalResult(db, live);
   if (db.live?.matchId === matchId) db.live = live;
 }
 
@@ -822,12 +941,7 @@ async function api(req, res, url) {
       delete db.liveGames[body.matchId];
       if (db.live?.matchId === body.matchId) db.live = null;
     }
-    const matchId = body.matchId || db.live?.matchId;
-    if (!db.matches.some((match) => match.id === matchId && !isSenior(match.level))) {
-      send(res, 400, { error: "Jogo invalido." });
-      return;
-    }
-    const baseLive = body.reset ? {} : db.liveGames?.[matchId] || (db.live?.matchId === matchId ? db.live : {}) || {};
+    const baseLive = body.reset ? {} : db.live || {};
     db.live = { ...baseLive, ...body, updatedAt: new Date().toISOString() };
     delete db.live.reset;
     if (!db.live.status) db.live.status = "Em direto";
@@ -836,7 +950,6 @@ async function api(req, res, url) {
     if (db.live.matchId) {
       db.liveGames[db.live.matchId] = db.live;
     }
-    saveFinalResult(db, db.live);
     await saveDb(db);
     send(res, 200, { live: db.live, currentMatch: currentMatch(db) });
     return;
