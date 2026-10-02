@@ -1,11 +1,11 @@
 {
   "meta": {
     "club": "Casa Pia AC",
-    "createdAt": "2026-10-02T22:04:50.328Z",
+    "createdAt": "2026-10-02T22:20:04.615Z",
     "sourceWorkbook": "C:/Users/catas/OneDrive - Universidade do Algarve/Ambiente de Trabalho/CASA PIA AC/FemininoCasaPia_BD26_27.xlsx",
-    "sportsRecordsResetVersion": "bd26_27_2026_10_02_photo_links_v3",
+    "sportsRecordsResetVersion": "bd26_27_2026_10_02_photo_links_no_seniores_v4",
     "importMode": "players-bd26-27",
-    "note": "Base de jogadoras 26/27 importada ignorando as primeiras 3 linhas de cada folha. Se link for imagem direta, e usado como foto; se for ficha/perfil, fica como profileUrl."
+    "note": "Base de jogadoras 26/27 sem escalão Seniores. Se link for imagem direta, e usado como foto; se for ficha/perfil, fica como profileUrl."
   },
   "teams": [
     {
@@ -27,11 +27,6 @@
       "level": "Sub19",
       "format": 11,
       "label": "Sub19 Futebol 11"
-    },
-    {
-      "level": "Seniores",
-      "format": 11,
-      "label": "Seniores Futebol 11"
     }
   ],
   "players": [
