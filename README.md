@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/30633375/README.md)
+[README.md](https://github.com/user-attachments/files/33178392/README.md)
 # Casa Pia AC Live
 
 Aplicação web para resultados, ficha de jogo, live e registo de eventos dos escalões de formação.
@@ -17,15 +17,10 @@ http://localhost:4173
 
 ## Acesso
 
-Existem apenas dois perfis: `admin` e `delegate`. Os identificadores e as palavras-passe são definidos pelas variáveis `CPAC_ADMIN_*` e `CPAC_DELEGATE_*` descritas em `.env.example`.
+- Delegado: ID `Delegado`, palavra-passe `0000`
+- Gestão: ID `Catarina`, palavra-passe `kikomiau`
 
-O login é validado no servidor. A sessão é guardada num cookie técnico `HttpOnly`, com duração máxima de oito horas. Nunca colocar palavras-passe em `public/app.js`, no README ou no repositório.
-
-Para desenvolvimento local, definir as variáveis no terminal antes de executar `npm start`. Em produção, configurá-las como segredos no Render.
-
-As operações relevantes ficam registadas em `DATA_DIR/audit.log`. O administrador pode consultar os últimos registos através de `GET /api/audit`.
-
-A informação específica sobre tratamento de dados está disponível em `/privacidade.html` e complementa a política geral do clube.
+Nota: este login é local no browser. Para uma publicação pública com dados sensíveis, o próximo passo recomendado é autenticação no backend.
 
 ## Publicar no Render
 
@@ -34,11 +29,8 @@ A informação específica sobre tratamento de dados está disponível em `/priv
 3. Fazer upload/push do projeto para o GitHub.
 4. No Render, escolher **New > Blueprint**.
 5. Selecionar o repositório.
-6. O Render lê o `render.yaml` e cria:
-   - web service Node
-   - disco persistente em `/var/data`
+6. O Render lê o `render.yaml` e cria um web service Node. Configurar a ligacao ao Drive indicada abaixo antes de registar jogos.
 7. Depois do deploy, abrir o URL gerado pelo Render.
-8. Antes do primeiro arranque, definir `CPAC_ADMIN_PASSWORD` e `CPAC_DELEGATE_PASSWORD` em **Environment**. O serviço recusa arrancar em produção se algum destes segredos estiver vazio.
 
 ## Dados em produção
 
@@ -48,9 +40,27 @@ O ficheiro inicial é:
 data/db.json
 ```
 
-No primeiro arranque em produção, a app copia esse ficheiro para o disco persistente configurado em `DATA_DIR`.
+Sem Drive configurado ou disco persistente num plano pago, alteracoes locais perdem-se em deploys e reinicios no Render Free.
 
-Depois disso, os registos passam a ficar no disco persistente do servidor.
+### Guardar automaticamente no Excel do Drive
+
+Ficheiro existente: `Casa_Pia_AC_Dados_App.xlsx`, ID `1jpwKSi1aY9-aKmm_edFA5Bm137xWrgnA`.
+
+1. No Google Cloud Console, criar um projeto e ativar a Google Drive API.
+2. Criar uma conta de servico em IAM e Administracao > Contas de servico. Nao precisa de cargos de administrador do projeto.
+3. Na conta de servico, abrir Chaves > Adicionar chave > Criar nova chave > JSON.
+4. Partilhar apenas o Excel do Drive com o email `client_email` dessa conta, como Editor.
+5. No Render > Environment, definir `GOOGLE_DRIVE_FILE_ID=1jpwKSi1aY9-aKmm_edFA5Bm137xWrgnA` e `GOOGLE_SERVICE_ACCOUNT_JSON` com o conteudo completo do JSON da chave.
+6. Fazer deploy. Os logs devem mostrar `Dados restaurados do Excel no Drive` no primeiro pedido a app.
+7. Guardar uma ficha, registar eventos, terminar o jogo e confirmar as folhas Jogos, Fichas, Eventos e Live no Excel. Fazer novo deploy e confirmar que os dados permanecem.
+
+O servidor le o Excel uma vez por arranque, antes de servir os dados, e atualiza o mesmo ficheiro apos cada gravacao. A folha DadosRestauro guarda os registos completos, incluindo posicoes taticas e jogos apagados. As restantes folhas sao vistas de consulta; edita-las manualmente nao altera a app. As palavras-passe nao sao exportadas. Nao converter este ficheiro para Google Sheets nem remover DadosRestauro.
+
+Se o Drive falhar, o pedido falha explicitamente e nao confirma a gravacao. Nao inicia uma base vazia por falha de leitura. As operacoes sao ordenadas dentro de uma unica instancia; usar apenas uma instancia Render. Nao editar o Excel externamente enquanto a app estiver em uso, pois a proxima gravacao substitui a copia pelo estado atual do servidor.
+
+Nunca publicar a chave JSON no GitHub. A autenticacao do conector Drive no Codex nao fornece credenciais ao servidor Render.
+
+Documentacao: https://developers.google.com/identity/protocols/oauth2/service-account e https://developers.google.com/workspace/drive/api/guides/manage-uploads
 
 ## Excel
 
@@ -66,7 +76,7 @@ Ver `.env.example`.
 
 Em producao/publico:
 
-1. Entrar com a conta de administração configurada no servidor.
+1. Entrar com `Catarina` / `kikomiau`.
 2. Abrir `Resultados`.
 3. Usar `Importar Excel` e escolher o ficheiro `Casa pia.xlsx` atualizado.
 4. A app atualiza resultados, jogos e jogadoras, mantendo fichas de jogo, eventos, lives e jogos ocultados.
