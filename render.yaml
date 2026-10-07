@@ -9,9 +9,13 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATA_DIR
-        value: /var/data
+        value: ./data
       - key: OUTPUT_DIR
-        value: /var/data/outputs
+        value: ./outputs
+      - key: GOOGLE_DRIVE_FILE_ID
+        value: 1jpwKSi1aY9-aKmm_edFA5Bm137xWrgnA
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
       - key: CASA_PIA_XLSX_URL
         sync: false
       - key: CASA_PIA_AUTO_SYNC_MINUTES
@@ -24,7 +28,3 @@ services:
         value: "2024/2025"
       - key: ZEROZERO_AUTO_SYNC_UNTIL_CURRENT
         value: "1"
-    disk:
-      name: casa-pia-data
-      mountPath: /var/data
-      sizeGB: 1
