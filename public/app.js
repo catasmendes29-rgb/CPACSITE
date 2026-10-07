@@ -567,7 +567,10 @@ function restoreActiveDelegateMatch() {
   ].filter(Boolean);
   const reportIds = Object.keys(state.db.matchReports || {});
   const candidates = [...liveIds, ...reportIds];
-  const activeId = candidates.find((matchId) => state.db.matchReports?.[matchId] && matchById(matchId));
+  const activeId = candidates.find((matchId) => {
+    const live = state.db.liveGames?.[matchId] || (state.db.live?.matchId === matchId ? state.db.live : null);
+    return state.db.matchReports?.[matchId] && matchById(matchId) && !live?.liveEnded && matchById(matchId).status !== "finished";
+  });
   if (activeId) return restoreReportState(activeId);
   resetLineup();
   state.selectedMatch = null;
@@ -730,7 +733,8 @@ function updateEventFormMode() {
 function renderLive() {
   const match = currentMatch() || {};
   const live = state.liveDetailMatchId ? (state.db.liveGames || {})[state.liveDetailMatchId] || state.db.live || {} : state.db.live || {};
-  $("#scoreMini").textContent = `${live.homeScore ?? 0} - ${live.awayScore ?? 0}`;
+  const delegateLive = selectedMatchLive();
+  $("#scoreMini").textContent = `${delegateLive?.homeScore ?? 0} - ${delegateLive?.awayScore ?? 0}`;
   $("#liveCompetition").textContent = `${match.level || ""} · ${match.competition || ""}`;
   $("#liveTitle").textContent = `Casa Pia AC ${live.homeScore ?? 0} - ${live.awayScore ?? 0} ${match.opponent || "Adversário"}`;
   $("#livePhase").textContent = live.period || "Por iniciar";
@@ -1121,6 +1125,11 @@ function historyTable(matches) {
 
 function hydrateReportFields() {
   const report = selectedReport();
+  if (state.selectedMatch) {
+    $("#delegateManualOpponent").value = state.selectedMatch.opponent || "";
+    $("#delegateVenue").value = state.selectedMatch.venue || "Casa";
+    $("#delegateRound").value = state.selectedMatch.round || "";
+  }
   $("#delegateName").value = report.delegate || "";
   $("#tacticInput").value = report.tactic || "";
   $("#notesInput").value = report.notes || "";
@@ -1365,6 +1374,11 @@ $$("[data-control]").forEach((button) => {
 });
 
 $("#levelSelect").addEventListener("change", async () => {
+  if (state.selectedMatch) {
+    $("#levelSelect").value = state.level;
+    alert("Limpa primeiro a ficha atual para preparar um novo jogo.");
+    return;
+  }
   state.level = $("#levelSelect").value;
   state.selectedMatch = null;
   resetLineup();
@@ -1403,7 +1417,13 @@ $("#teamsSeasonSelect")?.addEventListener("change", () => {
 });
 
 async function ensureDelegateMatch() {
-  if (state.selectedMatch) return state.selectedMatch;
+  if (state.selectedMatch) {
+    if (selectedMatchLive()?.liveEnded || state.selectedMatch.status === "finished") {
+      alert("Este jogo terminou. Clica em Limpar ficha para criar outra partida.");
+      return null;
+    }
+    return state.selectedMatch;
+  }
   const opponent = $("#delegateManualOpponent").value.trim();
   if (!opponent) {
     alert("Escreve a equipa adversária.");
@@ -1412,11 +1432,14 @@ async function ensureDelegateMatch() {
   const fresh = await request("/api/manual-match", {
     method: "POST",
     body: JSON.stringify({
+      id: `manual_${crypto.randomUUID()}`,
       level: state.level,
       season: state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason,
       competition: "Jogo manual",
       opponent,
-      venue: "Casa",
+      venue: $("#delegateVenue").value,
+      round: $("#delegateRound").value.trim(),
+      createdBy: state.user?.name || "",
     }),
   });
   state.db = fresh;
@@ -1462,22 +1485,35 @@ $("#saveReport").addEventListener("click", async () => {
 });
 
 $("#clearReport").addEventListener("click", async () => {
-  if (!state.selectedMatch) return;
-  if (!confirm("Limpar a ficha de jogo deste jogo? Os eventos registados ficam guardados.")) return;
-  resetLineup();
-  $("#delegateName").value = "";
-  $("#tacticInput").value = "";
-  $("#notesInput").value = "";
-  await request("/api/report", {
-    method: "POST",
-    body: JSON.stringify({
-      matchId: state.selectedMatch.id,
-      clear: true,
-    }),
-  });
-  await refreshLive();
+  const live = selectedMatchLive();
+  const finished = live?.liveEnded || state.selectedMatch?.status === "finished";
+  if (state.selectedMatch && !finished && hasSystemEvent("Início do jogo")) {
+    alert("Termina o jogo antes de limpar a ficha e preparar outra partida.");
+    return;
+  }
+  if (state.selectedMatch) {
+    if (!confirm(finished
+      ? "Preparar uma nova ficha? A ficha, o resultado e os eventos do jogo terminado ficam guardados."
+      : "Limpar a ficha atual para preparar um novo jogo?")) return;
+    if (!finished) {
+      await request("/api/report", {
+        method: "POST",
+        body: JSON.stringify({ matchId: state.selectedMatch.id, clear: true }),
+      });
+      await refreshLive();
+    }
+  }
+  state.selectedMatch = null;
   state.reportSetupVisible = true;
+  state.playerSearch = "";
+  $("#playerSearch").value = "";
+  $("#delegateManualOpponent").value = "";
+  $("#delegateVenue").value = "Casa";
+  $("#delegateRound").value = "";
+  resetLineup();
+  setPickerMode("starter");
   renderAll();
+  $("#delegateSetup").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 $("#toggleReportView")?.addEventListener("click", () => {
