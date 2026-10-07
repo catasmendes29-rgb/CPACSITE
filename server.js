@@ -3,6 +3,7 @@ import { copyFile, readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
+import { createDriveStore } from "./src/drive/driveStore.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -26,6 +27,27 @@ const EXCEL_DEFAULT_SEASON = process.env.CASA_PIA_EXCEL_SEASON || "2025/2026";
 const SPORTS_RESET_VERSION = "bd26_27_2026_10_02_photo_links_no_seniores_v4";
 let lastSync = null;
 let lastZerozeroSync = null;
+const driveStore = createDriveStore({ fileId: process.env.GOOGLE_DRIVE_FILE_ID, credentialsJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON });
+let driveRestorePromise;
+let databaseQueue = Promise.resolve();
+function withDatabaseLock(action) {
+  const result = databaseQueue.then(action);
+  databaseQueue = result.catch(() => {});
+  return result;
+}
+
+async function restoreDriveDb() {
+  if (!driveStore.enabled) return;
+  if (!driveRestorePromise) {
+    driveRestorePromise = (async () => {
+      const remote = await driveStore.read();
+      const local = JSON.parse((await readFile(DB_PATH, "utf8")).replace(/^\uFEFF/, ""));
+      await writeFile(DB_PATH, JSON.stringify({ ...local, ...remote }, null, 2), "utf8");
+      console.log(`Dados restaurados do Excel no Drive: ${remote.matches.length} jogos.`);
+    })().catch(error => { driveRestorePromise = undefined; throw error; });
+  }
+  await driveRestorePromise;
+}
 
 async function spreadsheetTool() {
   try {
@@ -693,6 +715,7 @@ async function applyBundledSportsReset(db) {
 async function loadDb() {
   await mkdir(DATA_DIR, { recursive: true });
   await seedPersistentDb();
+  await restoreDriveDb();
   if (!(await exists(DB_PATH))) {
     if (SOURCE_XLSX_URL) {
       const imported = await importWorkbookUrl();
@@ -708,7 +731,7 @@ async function loadDb() {
   }
   const text = await readFile(DB_PATH, "utf8");
   const db = JSON.parse(text.replace(/^\uFEFF/, ""));
-  const changedReset = await applyBundledSportsReset(db);
+  const changedReset = driveStore.enabled ? false : await applyBundledSportsReset(db);
   const changedShape = ensureBaseShape(db);
   const changedSeed = await mergeBundledSeasonSeed(db);
   const changedResults = syncFinishedLiveResults(db);
@@ -722,6 +745,7 @@ async function loadDb() {
 async function saveDb(db) {
   syncFinishedLiveResults(db);
   db.meta.updatedAt = new Date().toISOString();
+  if (driveStore.enabled) await driveStore.write(db);
   await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
 }
 
@@ -1193,7 +1217,7 @@ async function staticFile(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
-    if (url.pathname.startsWith("/api/")) await api(req, res, url);
+    if (url.pathname.startsWith("/api/")) await withDatabaseLock(() => api(req, res, url));
     else await staticFile(req, res, url);
   } catch (error) {
     console.error(error);
@@ -1203,7 +1227,7 @@ const server = http.createServer(async (req, res) => {
 
 function startAutoSync() {
   if (!SOURCE_XLSX_URL || !AUTO_SYNC_MINUTES || !EXCEL_URL_SYNC_ENABLED) return;
-  const run = async () => {
+  const run = () => withDatabaseLock(async () => {
     try {
       const db = await loadDb();
       await syncFromConfiguredUrl(db);
@@ -1212,14 +1236,14 @@ function startAutoSync() {
       lastSync = { ok: false, at: new Date().toISOString(), error: error.message || "Erro na sincronização" };
       console.error("Falha na sincronização Excel:", error);
     }
-  };
+  });
   setTimeout(run, 5000);
   setInterval(run, AUTO_SYNC_MINUTES * 60 * 1000);
 }
 
 function startZerozeroAutoSync() {
   if (!ZEROZERO_AUTO_SYNC_MINUTES) return;
-  const run = async () => {
+  const run = () => withDatabaseLock(async () => {
     try {
       const db = await loadDb();
       const result = await syncZerozeroResults(db, {
@@ -1234,7 +1258,7 @@ function startZerozeroAutoSync() {
       lastZerozeroSync = { ok: false, at: new Date().toISOString(), error: error.message || "Erro na sincronização ZeroZero" };
       console.error("Falha na sincronização ZeroZero:", error);
     }
-  };
+  });
   setTimeout(run, 12000);
   setInterval(run, ZEROZERO_AUTO_SYNC_MINUTES * 60 * 1000);
 }
@@ -1242,6 +1266,7 @@ function startZerozeroAutoSync() {
 server.listen(PORT, () => {
   console.log(`Casa Pia Live disponível em http://localhost:${PORT}`);
   console.log(`Fonte de dados: ${SOURCE_DIR}`);
+  console.log(driveStore.enabled ? "Persistencia Excel no Google Drive ativa." : "Google Drive nao configurado: os dados ficam apenas no disco local.");
   if (SOURCE_XLSX_URL && EXCEL_URL_SYNC_ENABLED) console.log(`Sincronização Excel URL ativa: ${AUTO_SYNC_MINUTES || "manual"} min`);
   if (SOURCE_XLSX_URL && !EXCEL_URL_SYNC_ENABLED) console.log("Sincronização Excel URL bloqueada para preservar a base 26/27.");
   if (ZEROZERO_AUTO_SYNC_MINUTES) console.log(`Sincronização ZeroZero ativa: ${ZEROZERO_AUTO_SYNC_MINUTES} min`);
