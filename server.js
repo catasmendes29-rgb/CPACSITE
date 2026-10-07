@@ -711,7 +711,8 @@ async function loadDb() {
   const changedReset = await applyBundledSportsReset(db);
   const changedShape = ensureBaseShape(db);
   const changedSeed = await mergeBundledSeasonSeed(db);
-  if (changedReset || changedShape || changedSeed) {
+  const changedResults = syncFinishedLiveResults(db);
+  if (changedReset || changedShape || changedSeed || changedResults) {
     db.meta.migratedAt = new Date().toISOString();
     await saveDb(db);
   }
@@ -719,6 +720,7 @@ async function loadDb() {
 }
 
 async function saveDb(db) {
+  syncFinishedLiveResults(db);
   db.meta.updatedAt = new Date().toISOString();
   await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
 }
@@ -759,6 +761,27 @@ function ensureLiveGames(db) {
     db.liveGames[db.live.matchId] ||= db.live;
   }
   return db.liveGames;
+}
+
+function syncFinishedLiveResults(db) {
+  const games = { ...(db.liveGames || {}) };
+  if (db.live?.matchId) games[db.live.matchId] = db.live;
+  let changed = false;
+  for (const [matchId, live] of Object.entries(games)) {
+    if (!live.liveEnded) continue;
+    const match = db.matches.find((item) => item.id === matchId);
+    if (!match) continue;
+    const goalsFor = Number(live.homeScore ?? 0);
+    const goalsAgainst = Number(live.awayScore ?? 0);
+    if (!Number.isFinite(goalsFor) || !Number.isFinite(goalsAgainst)) continue;
+    if (match.goalsFor === goalsFor && match.goalsAgainst === goalsAgainst && match.status === "finished") continue;
+    match.goalsFor = goalsFor;
+    match.goalsAgainst = goalsAgainst;
+    match.status = "finished";
+    match.updatedAt = live.updatedAt || new Date().toISOString();
+    changed = true;
+  }
+  return changed;
 }
 
 function applyEventToLive(db, event) {
@@ -975,7 +998,7 @@ async function api(req, res, url) {
       delete db.liveGames[body.matchId];
       if (db.live?.matchId === body.matchId) db.live = null;
     }
-    const baseLive = body.reset ? {} : db.live || {};
+    const baseLive = body.reset ? {} : db.liveGames?.[body.matchId] || (db.live?.matchId === body.matchId ? db.live : {}) || {};
     db.live = { ...baseLive, ...body, updatedAt: new Date().toISOString() };
     delete db.live.reset;
     if (!db.live.status) db.live.status = "Em direto";
