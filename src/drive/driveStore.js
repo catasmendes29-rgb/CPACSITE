@@ -30,7 +30,7 @@ export function encodeDriveWorkbook(db) {
     for (let offset = 0, part = 1; offset < json.length; offset += 28000, part++) rows.push([key, part, json.slice(offset, offset + 28000)]);
   }
   add("DadosRestauro", rows);
-  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx", compression: true });
 }
 
 export function decodeDriveWorkbook(bytes) {
