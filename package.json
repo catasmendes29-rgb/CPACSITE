@@ -12,6 +12,7 @@
     "export:zerozero": "node scripts/export-zerozero.js"
   },
   "dependencies": {
+    "google-auth-library": "^11.1.0",
     "xlsx": "^0.18.5"
   }
 }
