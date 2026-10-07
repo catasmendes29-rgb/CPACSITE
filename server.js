@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
 import { createDriveStore } from "./src/drive/driveStore.js";
+import { applyMatchControl } from "./src/live/matchControls.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -1014,6 +1015,16 @@ async function api(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/api/match-control") {
+    const body = await readBody(req);
+    let event;
+    try { event = applyMatchControl(db, body.matchId, body.control); }
+    catch (error) { send(res, 400, { error: error.message }); return; }
+    await saveDb(db);
+    send(res, 200, { ...db, event, currentMatch: currentMatch(db) });
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/live") {
     const body = await readBody(req);
     if (body.reset && body.matchId) {
@@ -1102,7 +1113,7 @@ async function api(req, res, url) {
     event.cornersFor = db.live?.cornersFor || 0;
     event.cornersAgainst = db.live?.cornersAgainst || 0;
     await saveDb(db);
-    send(res, 201, { event, live: db.live });
+    send(res, 201, { ...db, event, currentMatch: currentMatch(db) });
     return;
   }
 
