@@ -18,6 +18,8 @@ const state = {
   reportSetupVisible: true,
   currentView: "data",
   refreshingLive: false,
+  savingEvent: false,
+  delegateRevision: 0,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -326,13 +328,13 @@ function canRegisterMatchEvent() {
 function updateMatchControlButtons() {
   $$("[data-control]").forEach((button) => {
     const stateForButton = canUseMatchControl(button.dataset.control);
-    button.disabled = !stateForButton.ok;
+    button.disabled = state.savingEvent || !stateForButton.ok;
     button.title = stateForButton.ok ? "" : stateForButton.reason;
   });
   const addEventButton = $("#addEvent");
   if (addEventButton) {
     const eventState = canRegisterMatchEvent();
-    addEventButton.disabled = !eventState.ok;
+    addEventButton.disabled = state.savingEvent || !eventState.ok;
     addEventButton.title = eventState.ok ? "" : eventState.reason;
   }
 }
@@ -1190,10 +1192,12 @@ async function bootstrap() {
 }
 
 async function refreshLive() {
-  if (state.refreshingLive) return;
+  if (state.refreshingLive || state.savingEvent) return;
   state.refreshingLive = true;
+  const revision = state.delegateRevision;
   try {
     const fresh = await request("/api/bootstrap");
+    if (state.savingEvent || revision !== state.delegateRevision) return;
     state.db.live = fresh.live;
     state.db.liveGames = fresh.liveGames;
     state.db.hiddenLiveGames = fresh.hiddenLiveGames;
@@ -1240,37 +1244,37 @@ function applyFreshDb(fresh) {
   renderLiveHub();
 }
 
-async function addSystemEvent(type, period) {
-  await request("/api/events", {
-    method: "POST",
-    body: JSON.stringify({
-      matchId: state.selectedMatch.id,
-      type,
-      team: "Sistema",
-      period,
-    }),
-  });
+async function saveDelegateAction(button, route, payload) {
+  if (state.savingEvent) return;
+  state.savingEvent = true;
+  state.delegateRevision += 1;
+  const label = button.textContent;
+  button.textContent = "A guardar...";
+  updateMatchControlButtons();
+  try {
+    const fresh = await request(route, { method: "POST", body: JSON.stringify(payload) });
+    state.db = fresh;
+    if (state.selectedMatch) state.selectedMatch = matchById(state.selectedMatch.id) || state.selectedMatch;
+    renderLive();
+    renderTimeline();
+    renderDataPage();
+    renderDelegateMode();
+  } finally {
+    state.savingEvent = false;
+    button.textContent = label;
+    updateMatchControlButtons();
+  }
 }
 
 async function setMatchControl(control) {
+  if (state.savingEvent) return;
   const allowed = canUseMatchControl(control);
   if (!allowed.ok) {
     alert(allowed.reason);
     updateMatchControlButtons();
     return;
   }
-  const config = {
-    "start-first": { period: "1ª Parte", status: "Em direto", liveEnded: false, event: "Início do jogo" },
-    "half-time": { period: "Intervalo", status: "Intervalo", liveEnded: false, event: "Fim da 1ª parte" },
-    "start-second": { period: "2ª Parte", status: "Em direto", liveEnded: false, event: "Início da 2ª parte" },
-    "full-time": { period: "Fim de jogo", status: "Terminado", liveEnded: true, event: "Fim de jogo" },
-  }[control];
-  await request("/api/live", {
-    method: "POST",
-    body: JSON.stringify({ ...config, matchId: state.selectedMatch.id }),
-  });
-  await addSystemEvent(config.event, config.period);
-  await refreshLive();
+  await saveDelegateAction($(`[data-control="${control}"]`), "/api/match-control", { control, matchId: state.selectedMatch.id });
 }
 
 $$(".tab").forEach((tab) => tab.addEventListener("click", () => {
@@ -1528,6 +1532,7 @@ $("#toggleReportView")?.addEventListener("click", () => {
 });
 
 $("#addEvent").addEventListener("click", async () => {
+  if (state.savingEvent) return;
   const eventState = canRegisterMatchEvent();
   if (!eventState.ok) {
     alert(eventState.reason);
@@ -1550,9 +1555,7 @@ $("#addEvent").addEventListener("click", async () => {
     return;
   }
 
-  await request("/api/events", {
-    method: "POST",
-    body: JSON.stringify({
+  await saveDelegateAction($("#addEvent"), "/api/events", {
       matchId: state.selectedMatch.id,
       type,
       team,
@@ -1565,9 +1568,7 @@ $("#addEvent").addEventListener("click", async () => {
       outPlayerName: team === "Adversário" ? "" : outPlayer?.name || "",
       inPlayerId: team === "Adversário" ? "" : inPlayer?.id || "",
       inPlayerName: team === "Adversário" ? "" : inPlayer?.name || "",
-    }),
   });
-  await refreshLive();
 });
 
 $("#uploadExcel")?.addEventListener("click", async () => {
