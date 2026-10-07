@@ -39,7 +39,13 @@ async function request(route, options = {}) {
     cache: "no-store",
     ...options,
   });
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) {
+    const text = await response.text();
+    let message = text;
+    try { message = JSON.parse(text).error || text; } catch {}
+    if (method !== "GET") alert(`Nao foi possivel guardar a alteracao: ${message}`);
+    throw new Error(message);
+  }
   return response.json();
 }
 
