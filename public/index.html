@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Casa Pia AC Live</title>
-    <link rel="stylesheet" href="/styles.css?v=20260923-mobile-results" />
+    <link rel="stylesheet" href="/styles.css?v=20260607-allplayers1" />
   </head>
   <body>
     <header class="topbar">
@@ -62,6 +62,12 @@
               </label>
               <label id="manualOpponentWrap">Equipa adversária
                 <input id="delegateManualOpponent" placeholder="Escrever adversário" />
+              </label>
+              <label>Local
+                <select id="delegateVenue"><option value="Casa">Casa</option><option value="Fora">Fora</option></select>
+              </label>
+              <label>Jornada
+                <input id="delegateRound" placeholder="Número da jornada" />
               </label>
               <div class="match-card" id="matchCard"></div>
               <label>Delegado
@@ -342,6 +348,6 @@
       </section>
     </div>
 
-    <script type="module" src="/app.js?v=20260923-final-results"></script>
+    <script type="module" src="/app.js?v=20260805-live-reset-score"></script>
   </body>
 </html>
