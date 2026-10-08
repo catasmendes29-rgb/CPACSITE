@@ -22,6 +22,8 @@ const state = {
   delegateRevision: 0,
 };
 
+import { playerMatchHistory } from "./playerHistory.js";
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const viewTitles = { data: "Resultados", teams: "Equipas", delegate: "Delegado", live: "Live" };
@@ -885,9 +887,7 @@ function renderDataPage() {
 }
 
 function playerAppearances(player) {
-  const history = player.history || [];
-  if (!state.resultsSeason || state.resultsSeason === "all") return history;
-  return history.filter((item) => item.season === state.resultsSeason);
+  return playerMatchHistory(state.db, player, state.resultsSeason);
 }
 
 function playerStats(player) {
@@ -896,7 +896,8 @@ function playerStats(player) {
   const assists = appearances.reduce((sum, item) => sum + Number(item.assists || 0), 0);
   const yellows = appearances.reduce((sum, item) => sum + Number(item.yellows || 0), 0);
   const reds = appearances.reduce((sum, item) => sum + Number(item.reds || 0), 0);
-  return { appearances, goals, assists, yellows, reds };
+  const games = appearances.filter(item => item.played !== false).length;
+  return { appearances, games, goals, assists, yellows, reds };
 }
 
 function renderTeamsPage() {
@@ -921,7 +922,7 @@ function renderTeamsPage() {
           ${photo}
           <span>
             <strong>${player.name}</strong>
-            <small>${stats.appearances.length} jogos</small>
+            <small>${stats.games} jogos</small>
           </span>
         </button>
       `;
@@ -941,8 +942,8 @@ function renderPlayerDetail() {
   }
   const stats = playerStats(player);
   const rows = stats.appearances.map((item) => [
-    item.opponent || "-",
-    item.role || "-",
+    escapeHtml(item.opponent || "-"),
+    escapeHtml(item.role || "-"),
     item.minutes === "" || item.minutes === null || item.minutes === undefined ? "-" : `${item.minutes} min`,
     `${Number(item.goals || 0)} G`,
     `${Number(item.assists || 0)} A`,
@@ -972,7 +973,7 @@ function renderPlayerDetail() {
       </div>
     </div>
     <div class="player-stat-row">
-      <article><strong>${stats.appearances.length}</strong><span>Jogos</span></article>
+      <article><strong>${stats.games}</strong><span>Jogos</span></article>
       <article><strong>${stats.goals}</strong><span>Golos</span></article>
       <article><strong>${stats.assists}</strong><span>Assist.</span></article>
       <article><strong>${stats.yellows}</strong><span>Amarelos</span></article>
@@ -1025,26 +1026,31 @@ function matchUpdatedAt(match) {
 }
 
 function showMatchAdmin(matchId) {
-  if (!isAdmin()) return;
   const match = matchById(matchId);
   if (!match) return;
   const report = state.db.matchReports?.[matchId];
   const live = state.db.liveGames?.[matchId] || (state.db.live?.matchId === matchId ? state.db.live : null);
   const events = state.db.events.filter((event) => event.matchId === matchId);
   $("#matchAdminContent").innerHTML = `
-    <h2>Gestão do jogo</h2>
+    <h2>Detalhes do jogo</h2>
     <p class="modal-kicker">${escapeHtml(match.level || "-")} · ${escapeHtml(match.competition || "Sem competição")}</p>
     <h3>Casa Pia ${match.goalsFor ?? live?.homeScore ?? 0} - ${match.goalsAgainst ?? live?.awayScore ?? 0} ${escapeHtml(match.opponent || "Adversário")}</h3>
     <dl class="match-meta-list">
       <div><dt>Fonte</dt><dd>${escapeHtml(matchSourceLabel(match))}</dd></div>
       <div><dt>Época</dt><dd>${escapeHtml(match.season || "-")}</dd></div>
       <div><dt>Atualizado</dt><dd>${escapeHtml(formatDateTime(matchUpdatedAt(match)))}</dd></div>
-      <div><dt>Estado</dt><dd>${escapeHtml(live?.status || match.status || "-")}</dd></div>
+      <div><dt>Estado</dt><dd>${escapeHtml(live?.status || ({ finished: "Terminado", scheduled: "Por jogar" }[match.status]) || match.status || "-")}</dd></div>
       <div><dt>Ficha</dt><dd>${report ? "Criada" : "Sem ficha"}</dd></div>
       <div><dt>Eventos</dt><dd>${events.length}</dd></div>
     </dl>
-    <p class="modal-note">Ao apagar, este jogo sai dos Resultados, Live, ficha e eventos. Antes de apagar, o servidor cria um backup do db.json.</p>
-    <button class="danger delete-match" data-match-id="${escapeHtml(match.id)}">Apagar jogo</button>
+    <h3>Cronologia de eventos</h3>
+    <div class="timeline result-timeline">${events.slice().sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || ""))).map(event => `
+      <article class="${eventClass(event)}">
+        <strong>${escapeHtml(event.team === "Sistema" ? event.type : `${event.type} · ${eventDescription(event)}`)}</strong>
+        <small>${[event.period, event.createdAt ? formatDateTime(event.createdAt) : ""].filter(Boolean).map(escapeHtml).join(" · ")}</small>
+      </article>
+    `).join("") || "<p>Sem eventos registados neste jogo.</p>"}</div>
+    ${isAdmin() ? `<p class="modal-note">Apagar remove o jogo, a ficha e os eventos.</p><button class="danger delete-match" data-match-id="${escapeHtml(match.id)}">Apagar jogo</button>` : ""}
   `;
   $("#matchAdminModal").hidden = false;
 }
@@ -1116,9 +1122,9 @@ function historyTable(matches) {
     ? matches.map((match) => {
         const kind = resultKind(match);
         const result = kind === "pending" ? "Por jogar" : `<span class="score"><span class="goals-for">${match.goalsFor}</span>-<span class="goals-against">${match.goalsAgainst}</span></span>`;
-        const clickable = isAdmin() ? "match-admin-row" : "";
+        const clickable = "match-admin-row";
         return `
-          <tr class="${clickable}" data-match-id="${escapeHtml(match.id)}">
+          <tr class="${clickable}" data-match-id="${escapeHtml(match.id)}" tabindex="0" role="button" aria-label="Ver jogo contra ${escapeHtml(match.opponent || "adversario")}">
             <td>${escapeHtml(match.round || "-")}</td>
             <td>${escapeHtml(match.opponent || "-")}</td>
             <td>${escapeHtml(match.venue || "-")}</td>
@@ -1310,9 +1316,18 @@ $("#logoutBtn").addEventListener("click", () => {
   setView("data");
 });
 
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") hideMatchAdmin();
+  const row = event.target.closest(".match-admin-row");
+  if (row && ["Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    showMatchAdmin(row.dataset.matchId);
+  }
+});
+
 document.addEventListener("click", async (event) => {
   const matchRow = event.target.closest(".match-admin-row");
-  if (matchRow && isAdmin()) {
+  if (matchRow) {
     showMatchAdmin(matchRow.dataset.matchId);
     return;
   }
