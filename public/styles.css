@@ -773,6 +773,8 @@ textarea {
 }
 
 .modal-card {
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
   width: min(92vw, 560px);
   padding: 22px;
   color: #fff;
@@ -788,6 +790,29 @@ textarea {
   color: #fff;
   background: #151515;
   border-color: rgba(155,128,54,0.55);
+}
+
+.result-timeline article {
+  padding: 12px;
+  border-left: 3px solid var(--gold);
+  background: #111;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+
+.result-timeline article.away-event {
+  border-left-color: var(--red);
+}
+
+.result-timeline article.system-event {
+  border-left: 0;
+  background: var(--red);
+}
+
+.result-timeline small {
+  display: block;
+  margin-top: 5px;
+  color: #eee;
 }
 
 .modal-kicker,
@@ -859,16 +884,7 @@ textarea {
 }
 
 .data-layout.single {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.data-layout > .panel {
-  min-width: 0;
-}
-
-#historyTable {
-  max-width: 100%;
-  overflow-x: auto;
+  grid-template-columns: 1fr;
 }
 
 .data-cards {
@@ -1146,6 +1162,18 @@ th {
 .player-profile span {
   color: var(--gold);
   font-weight: 900;
+}
+
+.player-profile small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.player-profile-link {
+  color: var(--gold);
+  margin-left: 8px;
 }
 
 .player-stat-row {
