@@ -12,7 +12,7 @@ const state = {
   lineupSlots: [],
   selectedSlot: null,
   pickerMode: "starter",
-  user: JSON.parse(localStorage.getItem("cpacUser") || "null"),
+  user: readStoredUser(),
   liveDetailMatchId: null,
   competitionFilter: "all",
   teamsLevel: "Sub13:7",
@@ -26,8 +26,17 @@ const state = {
   delegateRevision: 0,
 };
 
-import { playerMatchHistory } from "./playerHistory.js";
-import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js";
+import { playerMatchHistory } from "./playerHistory.js?v=20261016-sub13-views2";
+import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js?v=20261016-sub13-views2";
+
+function readStoredUser() {
+  try {
+    const user = JSON.parse(localStorage.getItem("cpacUser") || "null");
+    return user && ["admin", "delegate"].includes(user.role) ? user : null;
+  } catch {
+    return null;
+  }
+}
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
