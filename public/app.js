@@ -5,7 +5,7 @@ const state = {
   delegateCompetition: "",
   delegateOtherCompetition: "",
   teamsCompetition: "all",
-  dataLevel: "Sub13",
+  dataLevel: "Sub13:7",
   selectedMatch: null,
   starters: new Set(),
   bench: new Set(),
@@ -15,7 +15,7 @@ const state = {
   user: JSON.parse(localStorage.getItem("cpacUser") || "null"),
   liveDetailMatchId: null,
   competitionFilter: "all",
-  teamsLevel: "Sub13",
+  teamsLevel: "Sub13:7",
   selectedPlayerId: null,
   playerSearch: "",
   resultsSeason: "all",
@@ -27,7 +27,7 @@ const state = {
 };
 
 import { playerMatchHistory } from "./playerHistory.js";
-import { MATCH_TEAMS, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js";
+import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -69,8 +69,9 @@ function activeTeam() {
 }
 
 function levelPlayers(level = state.level) {
+  const baseLevel = teamView(level)?.baseLevel || level;
   return allPlayers()
-    .filter((player) => player.level === level);
+    .filter((player) => player.level === baseLevel);
 }
 
 function teamOptions() {
@@ -146,13 +147,13 @@ function seasonMatches() {
 }
 
 function dataLevelMatches(level = state.dataLevel) {
-  if (level === "all") return seasonMatches();
-  return seasonMatches().filter((match) => match.level === level);
+  return seasonMatches().filter(match => matchesTeamView(match, level, state.db.matchReports?.[match.id]));
 }
 
 function dataCompetitions(level = state.dataLevel) {
-  const defaults = (level === "all" ? delegateTeams : delegateTeams.filter(team => team.level === level))
-    .flatMap(team => competitionOptions(team.level).map(item => item.name));
+  const scope = teamView(level);
+  const defaults = (level === "all" ? delegateTeams : delegateTeams.filter(team => team.level === scope?.baseLevel))
+    .flatMap(team => competitionOptions(team.level).filter(item => scope?.baseLevel !== "Sub13" || item.format === scope.format).map(item => item.name));
   return [...new Set([...defaults, ...dataLevelMatches(level).map((match) => match.competition || "Sem competição")])]
     .sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
 }
@@ -223,6 +224,7 @@ function eventPlayers() {
 
 function setView(view) {
   state.currentView = view;
+  updatePageHash(view);
   if (view === "delegate" && !canDelegate()) {
     $(".delegate-tab").hidden = false;
   }
@@ -243,11 +245,26 @@ function setView(view) {
 function viewFromHash() {
   const rawKey = location.hash.replace("#", "").trim();
   const key = rawKey.toLowerCase();
+  const [section, slug] = key.split("/");
+  if (["resultados", "equipas"].includes(section) && slug) {
+    const scope = TEAM_VIEWS.find(item => item.slug === slug);
+    if (section === "resultados") {
+      state.dataLevel = slug === "todos" ? "all" : scope?.level || "Sub13:7";
+      return "data";
+    }
+    state.teamsLevel = scope?.level || "Sub13:7";
+    return "teams";
+  }
   if (key.startsWith("live/")) {
     state.liveDetailMatchId = decodeURIComponent(rawKey.slice(5));
     return "live";
   }
   return viewHashes[key] || (viewTitles[key] ? key : "data");
+}
+
+function updatePageHash(view = state.currentView) {
+  if (view === "data") history.replaceState(null, "", `#resultados/${state.dataLevel === "all" ? "todos" : teamView(state.dataLevel)?.slug || "sub13-fut7"}`);
+  if (view === "teams") history.replaceState(null, "", `#equipas/${teamView(state.teamsLevel)?.slug || "sub13-fut7"}`);
 }
 
 function renderAuth() {
@@ -370,7 +387,7 @@ function keepResultFilters(callback) {
     competitionFilter: state.competitionFilter,
   };
   callback();
-  const teams = teamOptions();
+  const teams = TEAM_VIEWS;
   if (filters.dataLevel === "all" || teams.some((team) => team.level === filters.dataLevel)) state.dataLevel = filters.dataLevel;
   if (teams.some((team) => team.level === filters.teamsLevel)) state.teamsLevel = filters.teamsLevel;
   if (filters.resultsSeason === "all" || availableSeasons().includes(filters.resultsSeason)) state.resultsSeason = filters.resultsSeason;
@@ -398,7 +415,7 @@ function renderSelectors() {
     if (manualLevelSelect) manualLevelSelect.append(option(team.label, team.level));
   });
 
-  teamOptions().forEach((team) => {
+  TEAM_VIEWS.forEach((team) => {
     dataLevelSelect.append(option(team.label, team.level));
   });
 
@@ -411,9 +428,9 @@ function renderSelectors() {
   formatSelect.value = String(selectedFormat);
   formatSelect.disabled = Boolean(state.selectedMatch) || formats.length === 1;
   renderDelegateCompetition();
-  if (state.dataLevel !== "all" && !teamOptions().some((team) => team.level === state.dataLevel)) state.dataLevel = "all";
+  if (state.dataLevel !== "all") state.dataLevel = teamView(state.dataLevel)?.level || "Sub13:7";
   dataLevelSelect.value = state.dataLevel;
-  if (manualLevelSelect) manualLevelSelect.value = state.dataLevel === "all" ? state.level : state.dataLevel;
+  if (manualLevelSelect) manualLevelSelect.value = state.dataLevel === "all" ? state.level : teamView(state.dataLevel)?.baseLevel || state.level;
   if ($("#manualSeason") && !$("#manualSeason").value) $("#manualSeason").value = state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason;
 
   $("#manualOpponentWrap").hidden = false;
@@ -866,9 +883,7 @@ function resultLetter(kind) {
 
 function availableLevelLabelsForSeason() {
   const matches = seasonMatches();
-  const levels = [...new Set(matches.map((match) => match.level).filter(Boolean))];
-  return levels
-    .map((level) => teamOptions().find((team) => team.level === level)?.label || level)
+  return [...new Set(matches.map(match => TEAM_VIEWS.find(view => matchesTeamView(match, view.level, state.db.matchReports?.[match.id]))?.label || match.level))]
     .sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
 }
 
@@ -876,7 +891,7 @@ function dataEmptyMessage() {
   const season = state.resultsSeason === "all" ? "todas as épocas" : state.resultsSeason;
   const level = state.dataLevel === "all"
     ? "todos os escalões"
-    : teamOptions().find((team) => team.level === state.dataLevel)?.label || state.dataLevel;
+    : teamView(state.dataLevel)?.label || state.dataLevel;
   const available = availableLevelLabelsForSeason();
   if (state.dataLevel !== "all" && available.length) {
     return `
@@ -896,6 +911,8 @@ function dataEmptyMessage() {
 
 function renderDataPage() {
   const level = state.dataLevel;
+  $("#dataLevelSelect").value = level;
+  $("#dataPageHeading").textContent = level === "all" ? "Resultados" : `Resultados · ${teamView(level)?.label || level}`;
   renderResultsSeasonSelect();
   renderCompetitionFilter();
   const summary = levelSummary(level);
@@ -927,7 +944,9 @@ function renderDataPage() {
 }
 
 function playerAppearances(player) {
-  return playerMatchHistory(state.db, player, state.resultsSeason, state.teamsCompetition);
+  const view = teamView(state.teamsLevel);
+  const scope = view?.baseLevel === "Sub13" ? { level: "Sub13", format: view.format } : {};
+  return playerMatchHistory(state.db, player, state.resultsSeason, state.teamsCompetition, scope);
 }
 
 function playerStats(player) {
@@ -945,14 +964,15 @@ function renderTeamsPage() {
   const teamsSelect = $("#teamsLevelSelect");
   if (!teamsSelect) return;
   teamsSelect.innerHTML = "";
-  teamOptions().forEach((team) => teamsSelect.append(option(team.label, team.level)));
-  if (!teamOptions().some((team) => team.level === state.teamsLevel)) state.teamsLevel = teamOptions()[0]?.level || "Sub13";
+  TEAM_VIEWS.forEach((team) => teamsSelect.append(option(team.label, team.level)));
+  state.teamsLevel = teamView(state.teamsLevel)?.level || "Sub13:7";
   teamsSelect.value = state.teamsLevel;
+  const scope = teamView(state.teamsLevel);
+  $("#teamsPageHeading").textContent = `Equipas · ${scope.label}`;
   const competitions = [...new Set([
-    ...competitionOptions(state.teamsLevel).map(item => item.name),
-    ...seasonMatches().filter(match => match.level === state.teamsLevel).map(match => match.competition || "Sem competição"),
-    ...levelPlayers(state.teamsLevel).flatMap(player => (player.history || [])
-      .filter(item => state.resultsSeason === "all" || item.season === state.resultsSeason)
+    ...competitionOptions(scope.baseLevel).filter(item => scope.baseLevel !== "Sub13" || item.format === scope.format).map(item => item.name),
+    ...seasonMatches().filter(match => matchesTeamView(match, state.teamsLevel, state.db.matchReports?.[match.id])).map(match => match.competition || "Sem competição"),
+    ...levelPlayers(state.teamsLevel).flatMap(player => playerAppearances(player)
       .map(item => item.competition).filter(Boolean)),
   ])].sort((a, b) => a.localeCompare(b, "pt"));
   if (!competitions.includes(state.teamsCompetition)) state.teamsCompetition = "all";
@@ -1244,8 +1264,8 @@ async function activateSelectedMatch() {
 async function bootstrap() {
   state.db = await request("/api/bootstrap");
   state.level = teamOptions()[0]?.level || "Sub13";
-  state.dataLevel = state.level;
-  state.teamsLevel = state.level;
+  state.dataLevel = TEAM_VIEWS[0].level;
+  state.teamsLevel = TEAM_VIEWS[0].level;
   restoreActiveDelegateMatch();
   renderAll();
   renderAuth();
@@ -1297,8 +1317,8 @@ async function refreshLive() {
 function applyFreshDb(fresh) {
   state.db = fresh;
   state.level = teamOptions().find((team) => team.level === state.level)?.level || teamOptions()[0]?.level || "Sub13";
-  state.dataLevel = state.dataLevel === "all" ? "all" : teamOptions().find((team) => team.level === state.dataLevel)?.level || state.level;
-  state.teamsLevel = teamOptions().find((team) => team.level === state.teamsLevel)?.level || state.level;
+  state.dataLevel = state.dataLevel === "all" ? "all" : teamView(state.dataLevel)?.level || "Sub13:7";
+  state.teamsLevel = teamView(state.teamsLevel)?.level || "Sub13:7";
   restoreActiveDelegateMatch();
   renderAll();
   renderAuth();
@@ -1470,6 +1490,7 @@ $("#levelSelect").addEventListener("change", async () => {
 
 $("#dataLevelSelect").addEventListener("change", () => {
   state.dataLevel = $("#dataLevelSelect").value;
+  updatePageHash();
   state.competitionFilter = "all";
   renderDataPage();
 });
@@ -1488,6 +1509,7 @@ $("#resultsSeasonSelect")?.addEventListener("change", () => {
 
 $("#teamsLevelSelect")?.addEventListener("change", () => {
   state.teamsLevel = $("#teamsLevelSelect").value;
+  updatePageHash();
   state.teamsCompetition = "all";
   state.selectedPlayerId = null;
   renderTeamsPage();
@@ -1822,7 +1844,7 @@ $("#saveManualMatch")?.addEventListener("click", async () => {
     body: JSON.stringify(payload),
   });
   applyFreshDb(fresh);
-  state.dataLevel = payload.level;
+  state.dataLevel = payload.level === "Sub13" ? `Sub13:${matchFormat(payload.level, fresh.manualMatch)}` : payload.level;
   state.resultsSeason = payload.season || "all";
   state.competitionFilter = payload.competition;
   renderAll();
@@ -1834,6 +1856,7 @@ $("#saveManualMatch")?.addEventListener("click", async () => {
 });
 
 await bootstrap();
+window.addEventListener("hashchange", () => setView(viewFromHash()));
 setInterval(() => {
   if (document.visibilityState === "visible" && state.currentView === "live") refreshLive();
 }, 5000);
