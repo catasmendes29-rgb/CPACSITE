@@ -1,6 +1,7 @@
 const state = {
   db: null,
   level: "Sub13",
+  matchFormat: 7,
   dataLevel: "Sub13",
   selectedMatch: null,
   starters: new Set(),
@@ -23,17 +24,13 @@ const state = {
 };
 
 import { playerMatchHistory } from "./playerHistory.js";
+import { MATCH_TEAMS, availableFormats, matchFormat } from "./matchFormats.js";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const viewTitles = { data: "Resultados", teams: "Equipas", delegate: "Delegado", live: "Live" };
 const viewHashes = { resultados: "data", equipas: "teams", delegado: "delegate", live: "live" };
-const delegateTeams = [
-  { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
-  { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
-  { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
-  { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-];
+const delegateTeams = MATCH_TEAMS;
 
 async function request(route, options = {}) {
   const method = (options.method || "GET").toUpperCase();
@@ -61,7 +58,11 @@ function option(label, value = label) {
 }
 
 function activeTeam() {
-  return delegateTeams.find((team) => team.level === state.level) || state.db.teams.find((team) => team.level === state.level) || delegateTeams[0];
+  const team = delegateTeams.find((team) => team.level === state.level) || delegateTeams[0];
+  const format = state.selectedMatch
+    ? matchFormat(state.level, state.selectedMatch, selectedReport())
+    : availableFormats(state.level).includes(state.matchFormat) ? state.matchFormat : team.format;
+  return { ...team, format, label: `${team.level} Futebol ${format}` };
 }
 
 function levelPlayers(level = state.level) {
@@ -71,7 +72,7 @@ function levelPlayers(level = state.level) {
 
 function teamOptions() {
   const byLevel = new Map();
-  [...(state.db?.teams || []), ...delegateTeams].forEach((team) => {
+  [...delegateTeams, ...(state.db?.teams || [])].forEach((team) => {
     if (!team?.level || byLevel.has(team.level)) return;
     byLevel.set(team.level, team);
   });
@@ -397,6 +398,13 @@ function renderSelectors() {
   });
 
   levelSelect.value = state.level;
+  const formatSelect = $("#delegateFormat");
+  const selectedFormat = activeTeam().format;
+  const formats = [...new Set([...availableFormats(state.level), selectedFormat])];
+  formatSelect.innerHTML = "";
+  formats.forEach(format => formatSelect.append(option(`Futebol de ${format}`, String(format))));
+  formatSelect.value = String(selectedFormat);
+  formatSelect.disabled = Boolean(state.selectedMatch) || formats.length === 1;
   if (state.dataLevel !== "all" && !teamOptions().some((team) => team.level === state.dataLevel)) state.dataLevel = "all";
   dataLevelSelect.value = state.dataLevel;
   if (manualLevelSelect) manualLevelSelect.value = state.dataLevel === "all" ? state.level : state.dataLevel;
@@ -517,7 +525,7 @@ function pitchMarkup(names, tactic, total, options = {}) {
           const name = names[index] || "";
           if (!name) return `<span class="player-dot empty" style="left:${slot.x}%;top:${slot.y}%">+</span>`;
           if (withPhotos) {
-            return `<span class="player-dot photo-dot" style="left:${slot.x}%;top:${slot.y}%"><img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" /><small>${name}</small></span>`;
+            return `<span class="player-dot photo-dot" style="left:${slot.x}%;top:${slot.y}%"><img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.parentElement.dataset.initials='${initials(name)}'; this.remove();" /><small>${name}</small></span>`;
           }
           return `<span class="player-dot" style="left:${slot.x}%;top:${slot.y}%">${name}</span>`;
         })
@@ -530,7 +538,7 @@ function livePlayerCard(name, index, level) {
   return `
     <article class="live-player-card">
       <div class="player-photo">
-        <img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.remove(); this.parentElement.dataset.initials='${initials(name)}';" />
+        <img src="${playerPhotoSrc(name, level)}" alt="${name}" onerror="this.parentElement.dataset.initials='${initials(name)}'; this.remove();" />
       </div>
       <strong>${index + 1}. ${name}</strong>
     </article>
@@ -1099,7 +1107,7 @@ function renderLiveDetailSheets() {
   if (!lineup || !matchId) return;
   const report = state.db.matchReports[matchId] || {};
   const match = matchById(matchId);
-  const total = teamOptions().find((team) => team.level === match?.level)?.format || (report.starters || []).length || 11;
+  const total = matchFormat(match?.level, match || {}, report);
   const starters = report.starters || [];
   lineup.innerHTML = `
     <h3>Tática ${report.tactic || "-"}</h3>
@@ -1405,6 +1413,7 @@ $("#levelSelect").addEventListener("change", async () => {
     return;
   }
   state.level = $("#levelSelect").value;
+  state.matchFormat = availableFormats(state.level)[0];
   state.selectedMatch = null;
   resetLineup();
   renderAll();
@@ -1441,6 +1450,22 @@ $("#teamsSeasonSelect")?.addEventListener("change", () => {
   renderTeamsPage();
 });
 
+$("#delegateFormat").addEventListener("change", () => {
+  if (state.selectedMatch) return;
+  const format = Number($("#delegateFormat").value);
+  if (!availableFormats(state.level).includes(format)) return;
+  if ((state.starters.size || state.bench.size) && !confirm("Alterar o formato limpa a escolha de titulares e suplentes. Continuar?")) {
+    $("#delegateFormat").value = String(activeTeam().format);
+    return;
+  }
+  state.matchFormat = format;
+  resetLineup();
+  $("#tacticInput").value = "";
+  renderSelectors();
+  renderPlayers();
+  renderEventPlayers();
+});
+
 async function ensureDelegateMatch() {
   if (state.selectedMatch) {
     if (selectedMatchLive()?.liveEnded || state.selectedMatch.status === "finished") {
@@ -1459,6 +1484,7 @@ async function ensureDelegateMatch() {
     body: JSON.stringify({
       id: `manual_${crypto.randomUUID()}`,
       level: state.level,
+      format: activeTeam().format,
       season: state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason,
       competition: "Jogo manual",
       opponent,
@@ -1496,6 +1522,7 @@ $("#saveReport").addEventListener("click", async () => {
     body: JSON.stringify({
       matchId: state.selectedMatch.id,
       delegate: $("#delegateName").value,
+      format: activeTeam().format,
       tactic: $("#tacticInput").value,
       notes: $("#notesInput").value,
       starters: state.lineupSlots.filter(Boolean),
