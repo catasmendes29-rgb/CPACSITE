@@ -6,6 +6,7 @@ import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
 import { createDriveStore } from "./src/drive/driveStore.js";
 import { applyMatchControl } from "./src/live/matchControls.js";
 import { MATCH_TEAMS, availableFormats, matchFormat, competitionDefinition } from "./public/matchFormats.js";
+import { mergeCalendar } from "./src/calendar/calendar.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -32,6 +33,14 @@ let lastZerozeroSync = null;
 const driveStore = createDriveStore({ fileId: process.env.GOOGLE_DRIVE_FILE_ID, credentialsJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON });
 let driveRestorePromise;
 let databaseQueue = Promise.resolve();
+let bundledCalendar;
+async function mergeBundledCalendar(db) {
+  if (bundledCalendar === undefined) {
+    const file = path.join(__dirname, "data", "calendar.json");
+    bundledCalendar = await exists(file) ? JSON.parse(await readFile(file, "utf8")) : null;
+  }
+  return bundledCalendar ? mergeCalendar(db, bundledCalendar) : false;
+}
 function withDatabaseLock(action) {
   const result = databaseQueue.then(action);
   databaseQueue = result.catch(() => {});
@@ -723,7 +732,8 @@ async function loadDb() {
   const changedShape = ensureBaseShape(db);
   const changedSeed = await mergeBundledSeasonSeed(db);
   const changedResults = syncFinishedLiveResults(db);
-  if (changedReset || changedShape || changedSeed || changedResults) {
+  const changedCalendar = await mergeBundledCalendar(db);
+  if (changedReset || changedShape || changedSeed || changedResults || changedCalendar) {
     db.meta.migratedAt = new Date().toISOString();
     await saveDb(db);
   }
@@ -1125,6 +1135,7 @@ async function api(req, res, url) {
     await backupDb(`apagar-jogo-${matchId}`);
     db.deletedMatchIds ||= [];
     if (!db.deletedMatchIds.includes(matchId)) db.deletedMatchIds.push(matchId);
+    if (match.calendarId && !db.deletedMatchIds.includes(match.calendarId)) db.deletedMatchIds.push(match.calendarId);
     db.matches = db.matches.filter((item) => item.id !== matchId);
     db.events = (db.events || []).filter((event) => event.matchId !== matchId);
     delete db.matchReports?.[matchId];
