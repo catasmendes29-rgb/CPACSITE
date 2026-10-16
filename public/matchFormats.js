@@ -5,6 +5,21 @@ export const MATCH_TEAMS = [
   { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
 ];
 
+export const TEAM_VIEWS = MATCH_TEAMS.flatMap(team => team.level === "Sub13"
+  ? [7, 9].map(format => ({ level: `Sub13:${format}`, baseLevel: "Sub13", format, label: `Sub13 Futebol de ${format}`, slug: `sub13-fut${format}` }))
+  : [{ ...team, baseLevel: team.level, slug: team.level.toLowerCase() }]);
+
+export function teamView(key) {
+  return TEAM_VIEWS.find(view => view.level === (key === "Sub13" ? "Sub13:7" : key));
+}
+
+export function matchesTeamView(match, key, report = {}) {
+  if (key === "all") return true;
+  const view = teamView(key);
+  return Boolean(view && match.level === view.baseLevel
+    && (view.baseLevel !== "Sub13" || matchFormat(match.level, match, report) === view.format));
+}
+
 export function availableFormats(level) {
   return level === "Sub13" ? [7, 9] : [11];
 }
