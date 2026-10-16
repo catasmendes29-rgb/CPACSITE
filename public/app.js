@@ -2,6 +2,9 @@ const state = {
   db: null,
   level: "Sub13",
   matchFormat: 7,
+  delegateCompetition: "",
+  delegateOtherCompetition: "",
+  teamsCompetition: "all",
   dataLevel: "Sub13",
   selectedMatch: null,
   starters: new Set(),
@@ -24,7 +27,7 @@ const state = {
 };
 
 import { playerMatchHistory } from "./playerHistory.js";
-import { MATCH_TEAMS, availableFormats, matchFormat } from "./matchFormats.js";
+import { MATCH_TEAMS, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -148,7 +151,9 @@ function dataLevelMatches(level = state.dataLevel) {
 }
 
 function dataCompetitions(level = state.dataLevel) {
-  return [...new Set(dataLevelMatches(level).map((match) => match.competition || "Sem competição"))]
+  const defaults = (level === "all" ? delegateTeams : delegateTeams.filter(team => team.level === level))
+    .flatMap(team => competitionOptions(team.level).map(item => item.name));
+  return [...new Set([...defaults, ...dataLevelMatches(level).map((match) => match.competition || "Sem competição")])]
     .sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }));
 }
 
@@ -165,7 +170,7 @@ function renderCompetitionFilter() {
   if (state.competitionFilter !== "all" && !competitions.includes(state.competitionFilter)) state.competitionFilter = "all";
   select.innerHTML = "";
   select.append(option("Todas", "all"));
-  competitions.forEach((competition) => select.append(option(competition, competition)));
+  competitions.forEach((competition) => select.append(option(competitionLabel(competition), competition)));
   select.value = state.competitionFilter;
 }
 
@@ -405,12 +410,39 @@ function renderSelectors() {
   formats.forEach(format => formatSelect.append(option(`Futebol de ${format}`, String(format))));
   formatSelect.value = String(selectedFormat);
   formatSelect.disabled = Boolean(state.selectedMatch) || formats.length === 1;
+  renderDelegateCompetition();
   if (state.dataLevel !== "all" && !teamOptions().some((team) => team.level === state.dataLevel)) state.dataLevel = "all";
   dataLevelSelect.value = state.dataLevel;
   if (manualLevelSelect) manualLevelSelect.value = state.dataLevel === "all" ? state.level : state.dataLevel;
   if ($("#manualSeason") && !$("#manualSeason").value) $("#manualSeason").value = state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason;
 
   $("#manualOpponentWrap").hidden = false;
+}
+
+function renderDelegateCompetition() {
+  const select = $("#delegateCompetition");
+  const presets = competitionOptions(state.level);
+  const saved = state.selectedMatch?.competition;
+  let value = saved ? (competitionDefinition(state.level, saved) ? saved : "other") : state.delegateCompetition;
+  if (value !== "other" && !presets.some(item => item.name === value)) {
+    value = (presets.find(item => item.format === activeTeam().format) || presets[0])?.name || "other";
+  }
+  select.innerHTML = "";
+  presets.forEach(item => select.append(option(item.label, item.name)));
+  select.append(option("Outro", "other"));
+  select.value = value;
+  select.disabled = Boolean(state.selectedMatch);
+  select.title = saved || (value === "other" ? state.delegateOtherCompetition : value);
+  if (!state.selectedMatch) state.delegateCompetition = value;
+  $("#delegateOtherCompetitionWrap").hidden = value !== "other";
+  $("#delegateOtherCompetition").value = saved && value === "other" ? saved : state.delegateOtherCompetition;
+  $("#delegateOtherCompetition").disabled = Boolean(state.selectedMatch);
+}
+
+function delegateCompetitionName() {
+  return $("#delegateCompetition").value === "other"
+    ? $("#delegateOtherCompetition").value.trim()
+    : $("#delegateCompetition").value;
 }
 
 function renderMatchCard() {
@@ -895,7 +927,7 @@ function renderDataPage() {
 }
 
 function playerAppearances(player) {
-  return playerMatchHistory(state.db, player, state.resultsSeason);
+  return playerMatchHistory(state.db, player, state.resultsSeason, state.teamsCompetition);
 }
 
 function playerStats(player) {
@@ -916,6 +948,19 @@ function renderTeamsPage() {
   teamOptions().forEach((team) => teamsSelect.append(option(team.label, team.level)));
   if (!teamOptions().some((team) => team.level === state.teamsLevel)) state.teamsLevel = teamOptions()[0]?.level || "Sub13";
   teamsSelect.value = state.teamsLevel;
+  const competitions = [...new Set([
+    ...competitionOptions(state.teamsLevel).map(item => item.name),
+    ...seasonMatches().filter(match => match.level === state.teamsLevel).map(match => match.competition || "Sem competição"),
+    ...levelPlayers(state.teamsLevel).flatMap(player => (player.history || [])
+      .filter(item => state.resultsSeason === "all" || item.season === state.resultsSeason)
+      .map(item => item.competition).filter(Boolean)),
+  ])].sort((a, b) => a.localeCompare(b, "pt"));
+  if (!competitions.includes(state.teamsCompetition)) state.teamsCompetition = "all";
+  const competitionSelect = $("#teamsCompetitionFilter");
+  competitionSelect.innerHTML = "";
+  competitionSelect.append(option("Todas", "all"));
+  competitions.forEach(name => competitionSelect.append(option(competitionLabel(name), name)));
+  competitionSelect.value = state.teamsCompetition;
 
   const players = levelPlayers(state.teamsLevel);
   if (!players.some((player) => player.id === state.selectedPlayerId)) state.selectedPlayerId = players[0]?.id || null;
@@ -951,6 +996,8 @@ function renderPlayerDetail() {
   const stats = playerStats(player);
   const rows = stats.appearances.map((item) => [
     escapeHtml(item.opponent || "-"),
+    escapeHtml(item.competition || "-"),
+    item.format ? `Futebol de ${item.format}` : "-",
     escapeHtml(item.role || "-"),
     item.minutes === "" || item.minutes === null || item.minutes === undefined ? "-" : `${item.minutes} min`,
     `${Number(item.goals || 0)} G`,
@@ -988,7 +1035,7 @@ function renderPlayerDetail() {
       <article><strong>${stats.reds}</strong><span>Vermelhos</span></article>
     </div>
     <h3 class="competition-title">Histórico</h3>
-    ${table(["Adversário", "Papel", "Tempo", "Golos", "Assist.", "Amarelos", "Vermelhos"], rows)}
+    <div class="table-wrap">${table(["Adversário", "Competição", "Formato", "Papel", "Tempo", "Golos", "Assist.", "Amarelos", "Vermelhos"], rows)}</div>
   `;
 }
 
@@ -1134,7 +1181,7 @@ function historyTable(matches) {
         return `
           <tr class="${clickable}" data-match-id="${escapeHtml(match.id)}" tabindex="0" role="button" aria-label="Ver jogo contra ${escapeHtml(match.opponent || "adversario")}">
             <td>${escapeHtml(match.round || "-")}</td>
-            <td>${escapeHtml(match.opponent || "-")}</td>
+            <td>${escapeHtml(match.opponent || "-")}<small class="match-format">Futebol de ${matchFormat(match.level, match, state.db.matchReports?.[match.id])}</small></td>
             <td>${escapeHtml(match.venue || "-")}</td>
             <td>${result}</td>
             <td><span class="badge ${kind}">${resultLetter(kind)}</span></td>
@@ -1414,6 +1461,8 @@ $("#levelSelect").addEventListener("change", async () => {
   }
   state.level = $("#levelSelect").value;
   state.matchFormat = availableFormats(state.level)[0];
+  state.delegateCompetition = "";
+  state.delegateOtherCompetition = "";
   state.selectedMatch = null;
   resetLineup();
   renderAll();
@@ -1439,6 +1488,7 @@ $("#resultsSeasonSelect")?.addEventListener("change", () => {
 
 $("#teamsLevelSelect")?.addEventListener("change", () => {
   state.teamsLevel = $("#teamsLevelSelect").value;
+  state.teamsCompetition = "all";
   state.selectedPlayerId = null;
   renderTeamsPage();
 });
@@ -1450,6 +1500,34 @@ $("#teamsSeasonSelect")?.addEventListener("change", () => {
   renderTeamsPage();
 });
 
+$("#teamsCompetitionFilter").addEventListener("change", () => {
+  state.teamsCompetition = $("#teamsCompetitionFilter").value;
+  renderTeamsPage();
+});
+
+$("#delegateOtherCompetition").addEventListener("input", () => {
+  state.delegateOtherCompetition = $("#delegateOtherCompetition").value;
+});
+
+$("#delegateCompetition").addEventListener("change", () => {
+  if (state.selectedMatch) return;
+  const value = $("#delegateCompetition").value;
+  const preset = competitionDefinition(state.level, value);
+  if (preset && preset.format !== activeTeam().format) {
+    if ((state.starters.size || state.bench.size) && !confirm("Esta competição altera o formato e limpa a escolha das jogadoras. Continuar?")) {
+      $("#delegateCompetition").value = state.delegateCompetition;
+      return;
+    }
+    state.matchFormat = preset.format;
+    resetLineup();
+    $("#tacticInput").value = "";
+  }
+  state.delegateCompetition = value;
+  renderSelectors();
+  renderPlayers();
+  renderEventPlayers();
+});
+
 $("#delegateFormat").addEventListener("change", () => {
   if (state.selectedMatch) return;
   const format = Number($("#delegateFormat").value);
@@ -1459,6 +1537,9 @@ $("#delegateFormat").addEventListener("change", () => {
     return;
   }
   state.matchFormat = format;
+  if (state.delegateCompetition !== "other") {
+    state.delegateCompetition = competitionOptions(state.level).find(item => item.format === format)?.name || "other";
+  }
   resetLineup();
   $("#tacticInput").value = "";
   renderSelectors();
@@ -1475,6 +1556,12 @@ async function ensureDelegateMatch() {
     return state.selectedMatch;
   }
   const opponent = $("#delegateManualOpponent").value.trim();
+  const competition = delegateCompetitionName();
+  if (!competition) {
+    alert("Escreve o nome da competição.");
+    $("#delegateOtherCompetition").focus();
+    return null;
+  }
   if (!opponent) {
     alert("Escreve a equipa adversária.");
     return null;
@@ -1486,7 +1573,7 @@ async function ensureDelegateMatch() {
       level: state.level,
       format: activeTeam().format,
       season: state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason,
-      competition: "Jogo manual",
+      competition,
       opponent,
       venue: $("#delegateVenue").value,
       round: $("#delegateRound").value.trim(),
@@ -1557,6 +1644,8 @@ $("#clearReport").addEventListener("click", async () => {
   }
   state.selectedMatch = null;
   state.reportSetupVisible = true;
+  state.delegateCompetition = "";
+  state.delegateOtherCompetition = "";
   state.playerSearch = "";
   $("#playerSearch").value = "";
   $("#delegateManualOpponent").value = "";
