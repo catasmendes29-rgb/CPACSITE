@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
 import { createDriveStore } from "./src/drive/driveStore.js";
 import { applyMatchControl } from "./src/live/matchControls.js";
-import { MATCH_TEAMS, availableFormats, matchFormat } from "./public/matchFormats.js";
+import { MATCH_TEAMS, availableFormats, matchFormat, competitionDefinition } from "./public/matchFormats.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -1149,9 +1149,14 @@ async function api(req, res, url) {
     const competition = String(body.competition || "").trim();
     const opponent = String(body.opponent || "").trim();
     const existingMatch = db.matches.find(item => item.id === body.id);
+    const preset = competitionDefinition(level, competition);
     const format = body.format == null
-      ? matchFormat(level, existingMatch, db.matchReports?.[body.id])
+      ? preset?.format || matchFormat(level, existingMatch, db.matchReports?.[body.id])
       : Number(body.format);
+    if (preset && preset.format !== format) {
+      send(res, 400, { error: "O formato nao corresponde a competicao selecionada." });
+      return;
+    }
     if (body.format != null && !availableFormats(level).includes(format)) {
       send(res, 400, { error: "Formato de jogo invalido para este escalao." });
       return;
