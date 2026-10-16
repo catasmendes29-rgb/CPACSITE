@@ -1,4 +1,4 @@
-import { matchFormat } from "./matchFormats.js";
+import { matchFormat } from "./matchFormats.js?v=20261016-sub13-views2";
 
 export function playerMatchHistory(db, player, season = "all", competition = "all", scope = {}) {
   const key = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
