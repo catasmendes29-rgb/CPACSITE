@@ -19,8 +19,8 @@ export function encodeDriveWorkbook(db) {
   add("Resumo", [["Casa Pia AC - dados da app"], ["Atualizado em (UTC)", db.meta?.updatedAt || new Date().toISOString()], ["Jogadoras", db.players.length], ["Jogos", db.matches.length], ["Eventos", db.events.length]]);
   table("Jogadoras", ["id", "level", "name", "number", "position", "birthYear", "photoUrl", "profileUrl", "history"], db.players);
   table("Escaloes", ["level", "format", "label"], db.teams);
-  table("Jogos", ["id", "level", "season", "competition", "opponent", "venue", "round", "date", "time", "goalsFor", "goalsAgainst", "status", "source", "createdBy", "createdAt", "updatedAt"], db.matches);
-  table("Fichas", ["matchId", "delegate", "tactic", "starters", "lineupSlots", "bench", "notes", "createdAt", "updatedAt"], Object.entries(db.matchReports || {}).map(([matchId, report]) => ({ ...report, matchId })));
+  table("Jogos", ["id", "level", "format", "season", "competition", "opponent", "venue", "round", "date", "time", "goalsFor", "goalsAgainst", "status", "source", "createdBy", "createdAt", "updatedAt"], db.matches);
+  table("Fichas", ["matchId", "format", "delegate", "tactic", "starters", "lineupSlots", "bench", "notes", "createdAt", "updatedAt"], Object.entries(db.matchReports || {}).map(([matchId, report]) => ({ ...report, matchId })));
   table("Eventos", ["id", "matchId", "type", "team", "period", "playerId", "playerName", "assistId", "assistName", "outPlayerId", "outPlayerName", "inPlayerId", "inPlayerName", "notes", "createdAt"], db.events);
   table("Live", ["matchId", "homeScore", "awayScore", "period", "status", "liveEnded", "cornersFor", "cornersAgainst", "updatedAt"], Object.entries(db.liveGames || {}).map(([matchId, live]) => ({ ...live, matchId })));
   const rows = [["Colecao", "Parte", "JSON"]];
