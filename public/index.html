@@ -60,6 +60,12 @@
               <label>Escalão
                 <select id="levelSelect"></select>
               </label>
+              <label>Competição
+                <select id="delegateCompetition"></select>
+              </label>
+              <label id="delegateOtherCompetitionWrap" hidden>Nome da competição
+                <input id="delegateOtherCompetition" placeholder="Nome da taça ou torneio" />
+              </label>
               <label>Formato do jogo
                 <select id="delegateFormat"></select>
               </label>
@@ -287,6 +293,9 @@
             </label>
             <label class="inline-label">Época
               <select id="teamsSeasonSelect"></select>
+            </label>
+            <label class="inline-label">Competição
+              <select id="teamsCompetitionFilter"></select>
             </label>
           </div>
           <div id="teamsGrid" class="teams-grid"></div>
