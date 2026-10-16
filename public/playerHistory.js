@@ -1,4 +1,6 @@
-export function playerMatchHistory(db, player, season = "all", competition = "all") {
+import { matchFormat } from "./matchFormats.js";
+
+export function playerMatchHistory(db, player, season = "all", competition = "all", scope = {}) {
   const key = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
   const matchesPlayer = value => value === player.id || key(value) === key(player.name);
   const rows = new Map();
@@ -24,7 +26,7 @@ export function playerMatchHistory(db, player, season = "all", competition = "al
     rows.set(match.id, {
       ...imported, matchId: match.id, season: match.season, opponent: match.opponent, round: match.round, date: match.date,
       competition: match.competition || imported?.competition || "Sem competição",
-      format: match.format || report?.format || imported?.format,
+      format: matchFormat(match.level, match, report),
       level: match.level,
       role: starter ? "Titular" : bench ? "Suplente" : "Participante",
       minutes: imported?.minutes ?? "",
@@ -36,5 +38,7 @@ export function playerMatchHistory(db, player, season = "all", competition = "al
     });
   }
   return [...rows.values()].filter(item => (season === "all" || !season || item.season === season)
-    && (competition === "all" || !competition || (item.competition || "Sem competição") === competition));
+    && (competition === "all" || !competition || (item.competition || "Sem competição") === competition)
+    && (!scope.level || (item.level || player.level) === scope.level)
+    && (!scope.format || matchFormat(item.level || player.level, item) === scope.format));
 }
