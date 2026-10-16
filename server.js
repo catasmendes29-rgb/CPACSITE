@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { syncZerozeroResults } from "./src/zerozero/zerozeroSync.js";
 import { createDriveStore } from "./src/drive/driveStore.js";
 import { applyMatchControl } from "./src/live/matchControls.js";
+import { MATCH_TEAMS, availableFormats, matchFormat } from "./public/matchFormats.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
@@ -203,16 +204,17 @@ function ensureBaseShape(db) {
   db.liveGames ||= {};
   db.hiddenLiveGames ||= [];
   db.deletedMatchIds ||= [];
-  const requiredTeams = [
-    { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
-    { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
-    { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
-    { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-  ];
+  const requiredTeams = MATCH_TEAMS;
   for (const team of requiredTeams) {
     if (!db.teams.some((item) => item.level === team.level)) {
-      db.teams.push(team);
+      db.teams.push({ ...team });
       changed = true;
+    } else {
+      const existing = db.teams.find(item => item.level === team.level);
+      if (existing.format !== team.format || existing.label !== team.label) {
+        Object.assign(existing, team);
+        changed = true;
+      }
     }
   }
   for (const match of db.matches) {
@@ -394,12 +396,7 @@ async function importWorkbookLegacy() {
       sourceDir: SOURCE_DIR,
       sourceWorkbook: SOURCE_XLSX,
     },
-    teams: [
-      { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
-      { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
-      { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
-      { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-    ],
+    teams: MATCH_TEAMS.map(team => ({ ...team })),
     players,
     matches,
     matchReports: {},
@@ -469,12 +466,7 @@ function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xl
       importMode: "players-bd26-27",
       note: "Base de jogadoras 26/27 importada ignorando as primeiras 3 linhas de cada folha. Registos desportivos anteriores foram limpos.",
     },
-    teams: [
-      { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
-      { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
-      { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
-      { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-    ],
+    teams: MATCH_TEAMS.map(team => ({ ...team })),
     players,
     matches: [],
     matchReports: {},
@@ -570,12 +562,7 @@ async function importWorkbookBuffer(buffer, filename = "upload.xlsx") {
       sourceDir: SOURCE_DIR,
       sourceWorkbook: filename,
     },
-    teams: [
-      { level: "Sub13", format: 7, label: "Sub13 Futebol 7" },
-      { level: "Sub15", format: 9, label: "Sub15 Futebol 9" },
-      { level: "Sub17", format: 11, label: "Sub17 Futebol 11" },
-      { level: "Sub19", format: 11, label: "Sub19 Futebol 11" },
-    ],
+    teams: MATCH_TEAMS.map(team => ({ ...team })),
     players,
     matches,
     matchReports: {},
@@ -1161,6 +1148,14 @@ async function api(req, res, url) {
     const season = String(body.season || "").trim();
     const competition = String(body.competition || "").trim();
     const opponent = String(body.opponent || "").trim();
+    const existingMatch = db.matches.find(item => item.id === body.id);
+    const format = body.format == null
+      ? matchFormat(level, existingMatch, db.matchReports?.[body.id])
+      : Number(body.format);
+    if (body.format != null && !availableFormats(level).includes(format)) {
+      send(res, 400, { error: "Formato de jogo invalido para este escalao." });
+      return;
+    }
     if (!competition || !opponent) {
       send(res, 400, { error: "Indica pelo menos competição e adversário." });
       return;
@@ -1174,6 +1169,7 @@ async function api(req, res, url) {
       round: String(body.round || "").trim(),
       venue: String(body.venue || "").trim() || "Casa",
       level,
+      format,
       season,
       competition,
       date: String(body.date || "").trim(),
