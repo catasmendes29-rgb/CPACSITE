@@ -1100,6 +1100,66 @@ th {
   font-size: 0.8em;
 }
 
+.calendar-games {
+  display: grid;
+  gap: 0;
+}
+
+#data .data-layout > .panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.calendar-game {
+  display: grid;
+  grid-template-columns: 125px minmax(0, 1fr) minmax(120px, 220px);
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 8px;
+  text-align: left;
+  text-transform: none;
+  color: #fff;
+  background: #080808;
+  border: 0;
+  border-bottom: 1px solid #333;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.calendar-game:hover,
+.calendar-game:focus-visible {
+  background: #181818;
+  outline: 1px solid var(--gold);
+}
+
+.calendar-when,
+.calendar-teams {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calendar-when strong,
+.calendar-location {
+  color: var(--gold);
+}
+
+.calendar-teams small,
+.calendar-teams strong > span {
+  color: #ccc;
+}
+
+@media (max-width: 640px) {
+  .calendar-game {
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .calendar-location {
+    grid-column: 2;
+  }
+}
+
 .teams-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
