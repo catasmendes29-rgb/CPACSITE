@@ -338,6 +338,10 @@ label {
   margin: 0;
 }
 
+#delegateOtherCompetitionWrap[hidden] {
+  display: none !important;
+}
+
 input,
 select,
 textarea {
@@ -1073,6 +1077,27 @@ th {
 .teams-panel select {
   color: #111;
   background: #fff;
+}
+
+.teams-panel .section-head {
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.teams-panel .section-head > div {
+  flex: 1 0 100%;
+}
+
+.teams-panel .inline-label {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.match-format {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8em;
 }
 
 .teams-grid {
