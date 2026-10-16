@@ -27,6 +27,7 @@ const state = {
 };
 
 import { playerMatchHistory } from "./playerHistory.js?v=20261016-sub13-views2";
+import { upcomingMatches, calendarDate } from "./calendarView.js?v=20261016-calendar1";
 import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js?v=20261016-sub13-views2";
 
 function readStoredUser() {
@@ -938,7 +939,11 @@ function renderDataPage() {
     .map(([label, value, tone]) => `<article class="stat-card ${tone}"><span>${label}</span><strong>${value}</strong></article>`)
     .join("");
 
-  const groups = filteredDataMatches(level).reduce((map, match) => {
+  const matches = filteredDataMatches(level);
+  const calendar = upcomingMatches(matches);
+  renderCalendar(calendar);
+  const calendarIds = new Set(calendar.map(match => match.id));
+  const groups = matches.filter(match => !calendarIds.has(match.id)).reduce((map, match) => {
     const competition = match.competition || "Sem competição";
     if (!map.has(competition)) map.set(competition, []);
     map.get(competition).push(match);
@@ -949,7 +954,20 @@ function renderDataPage() {
     .map(([competition, matches]) => {
       return `<h3 class="competition-title">${escapeHtml(competition)}</h3>${historyTable(matches)}`;
     })
-    .join("") || dataEmptyMessage();
+    .join("") || (calendar.length ? "<p>Sem jogos anteriores para os filtros selecionados.</p>" : dataEmptyMessage());
+}
+
+function renderCalendar(matches) {
+  $("#calendarCount").textContent = `${matches.length} ${matches.length === 1 ? "jogo" : "jogos"}`;
+  $("#calendarGames").innerHTML = matches.map(match => {
+    const home = match.homeTeam || (match.venue === "Fora" ? match.opponent : "Casa Pia AC");
+    const away = match.awayTeam || (match.venue === "Fora" ? "Casa Pia AC" : match.opponent);
+    return `<button type="button" class="calendar-game match-admin-row" data-match-id="${escapeHtml(match.id)}">
+      <span class="calendar-when"><time datetime="${escapeHtml(match.date)}">${calendarDate(match.date)}</time><strong>${escapeHtml(match.time || "Hora por definir")}</strong></span>
+      <span class="calendar-teams"><strong>${escapeHtml(home)} <span>vs</span> ${escapeHtml(away)}</strong><small>${escapeHtml(competitionLabel(match.competition || "Sem competição"))} · Futebol de ${matchFormat(match.level, match, state.db.matchReports?.[match.id])}</small></span>
+      <span class="calendar-location">${escapeHtml([match.venue, match.stadium].filter(Boolean).join(" · "))}</span>
+    </button>`;
+  }).join("") || "<p>Sem jogos agendados para os filtros selecionados.</p>";
 }
 
 function playerAppearances(player) {
@@ -1099,6 +1117,7 @@ function formatDateTime(value) {
 }
 
 function matchSourceLabel(match) {
+  if (match.source === "CALENDAR_EXCEL") return "Calendário Excel";
   if (match.source === "ZEROZERO") return "ZeroZero";
   if (match.source === "MANUAL") return "Manual";
   if (match.source === "EXCEL") return "Excel";
@@ -1118,7 +1137,7 @@ function showMatchAdmin(matchId) {
   $("#matchAdminContent").innerHTML = `
     <h2>Detalhes do jogo</h2>
     <p class="modal-kicker">${escapeHtml(match.level || "-")} · ${escapeHtml(match.competition || "Sem competição")}</p>
-    <h3>Casa Pia ${match.goalsFor ?? live?.homeScore ?? 0} - ${match.goalsAgainst ?? live?.awayScore ?? 0} ${escapeHtml(match.opponent || "Adversário")}</h3>
+    <h3>Casa Pia ${match.goalsFor == null && match.goalsAgainst == null && !live ? "vs" : `${match.goalsFor ?? live?.homeScore ?? 0} - ${match.goalsAgainst ?? live?.awayScore ?? 0}`} ${escapeHtml(match.opponent || "Adversário")}</h3>
     <dl class="match-meta-list">
       <div><dt>Fonte</dt><dd>${escapeHtml(matchSourceLabel(match))}</dd></div>
       <div><dt>Época</dt><dd>${escapeHtml(match.season || "-")}</dd></div>
@@ -1126,7 +1145,11 @@ function showMatchAdmin(matchId) {
       <div><dt>Estado</dt><dd>${escapeHtml(live?.status || ({ finished: "Terminado", scheduled: "Por jogar" }[match.status]) || match.status || "-")}</dd></div>
       <div><dt>Ficha</dt><dd>${report ? "Criada" : "Sem ficha"}</dd></div>
       <div><dt>Eventos</dt><dd>${events.length}</dd></div>
+      ${match.date ? `<div><dt>Data</dt><dd>${escapeHtml(calendarDate(match.date))}</dd></div>` : ""}
+      ${match.time ? `<div><dt>Hora</dt><dd>${escapeHtml(match.time)}</dd></div>` : ""}
+      ${match.stadium ? `<div><dt>Campo</dt><dd>${escapeHtml(match.stadium)}</dd></div>` : ""}
     </dl>
+    ${canDelegate() && match.status !== "finished" && match.goalsFor == null && match.goalsAgainst == null ? `<button class="primary prepare-calendar-match" data-match-id="${escapeHtml(match.id)}">${report ? "Ver ficha de jogo" : "Preparar ficha de jogo"}</button>` : ""}
     <h3>Cronologia de eventos</h3>
     <div class="timeline result-timeline">${events.slice().sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || ""))).map(event => `
       <article class="${eventClass(event)}">
@@ -1416,6 +1439,23 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  const prepare = event.target.closest(".prepare-calendar-match");
+  if (prepare && canDelegate()) {
+    const match = matchById(prepare.dataset.matchId);
+    if (!match) return;
+    if (state.selectedMatch && state.selectedMatch.id !== match.id) {
+      alert("Limpa primeiro a ficha atual antes de preparar outro jogo.");
+      return;
+    }
+    hideMatchAdmin();
+    restoreReportState(match.id);
+    state.reportSetupVisible = true;
+    renderAll();
+    setView("delegate");
+    $("#delegateSetup").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
   const deleteMatch = event.target.closest(".delete-match");
   if (deleteMatch && isAdmin()) {
     const match = matchById(deleteMatch.dataset.matchId);
@@ -1584,6 +1624,7 @@ async function ensureDelegateMatch() {
       alert("Este jogo terminou. Clica em Limpar ficha para criar outra partida.");
       return null;
     }
+    if (!selectedMatchLive() && !state.db.events.some(event => event.matchId === state.selectedMatch.id)) await activateSelectedMatch();
     return state.selectedMatch;
   }
   const opponent = $("#delegateManualOpponent").value.trim();
