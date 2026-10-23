@@ -11,8 +11,11 @@ export function applyMatchControl(db, matchId, control) {
   const config = controls[control];
   const live = db.liveGames?.[matchId] || (db.live?.matchId === matchId ? db.live : null);
   if (!config || !live || !db.matchReports?.[matchId] || !db.matches.some(match => match.id === matchId)) throw new Error("Guarda primeiro a ficha de jogo.");
+  // A retry may arrive after the first request was saved, or from a stale client.
+  const existing = db.events.find(event => event.matchId === matchId && event.team === "Sistema" && event.type === config.event);
+  if (existing) return existing;
+  if (live.period === config.period) return null;
   if (live.liveEnded || !config.before.includes(live.period || "Pre-jogo")) throw new Error("Este controlo nao esta disponivel nesta fase do jogo.");
-  if (db.events.some(event => event.matchId === matchId && event.team === "Sistema" && event.type === config.event)) throw new Error("Esta acao ja foi registada.");
   const updatedAt = new Date().toISOString();
   const next = { ...live, matchId, period: config.period, status: config.status, liveEnded: control === "full-time", updatedAt };
   const event = { id: `evt_${randomUUID()}`, matchId, team: "Sistema", type: config.event, period: config.period, cornersFor: next.cornersFor || 0, cornersAgainst: next.cornersAgainst || 0, createdAt: updatedAt };
