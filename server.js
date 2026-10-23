@@ -240,6 +240,10 @@ function ensureBaseShape(db) {
     }
   }
   for (const player of db.players) {
+    if (player.id === "Sub15_Rita_Benfica" && player.name === "Rita Benfica") {
+      player.name = "Rita Moura";
+      changed = true;
+    }
     const cleanName = cleanStoredText(player.name);
     if (player.name && cleanName !== player.name) {
       player.name = cleanName;
@@ -256,6 +260,22 @@ function ensureBaseShape(db) {
           item[key] = cleaned;
           changed = true;
         }
+      }
+    }
+  }
+  for (const report of Object.values(db.matchReports)) {
+    for (const field of ["starters", "lineupSlots", "bench"]) {
+      if (report[field]?.includes("Rita Benfica")) {
+        report[field] = report[field].map(name => name === "Rita Benfica" ? "Rita Moura" : name);
+        changed = true;
+      }
+    }
+  }
+  for (const event of db.events) {
+    for (const field of ["playerName", "assistName", "inPlayerName", "outPlayerName"]) {
+      if (event[field] === "Rita Benfica") {
+        event[field] = "Rita Moura";
+        changed = true;
       }
     }
   }
@@ -741,6 +761,7 @@ async function loadDb() {
 }
 
 async function saveDb(db) {
+  await mergeBundledCalendar(db);
   syncFinishedLiveResults(db);
   db.meta.updatedAt = new Date().toISOString();
   if (driveStore.enabled) await driveStore.write(db);
@@ -1014,10 +1035,11 @@ async function api(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/match-control") {
     const body = await readBody(req);
+    const eventCount = db.events.length;
     let event;
     try { event = applyMatchControl(db, body.matchId, body.control); }
     catch (error) { send(res, 400, { error: error.message }); return; }
-    await saveDb(db);
+    if (db.events.length !== eventCount) await saveDb(db);
     send(res, 200, { ...db, event, currentMatch: currentMatch(db) });
     return;
   }
