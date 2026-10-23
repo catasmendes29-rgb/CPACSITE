@@ -46,18 +46,19 @@ const viewHashes = { resultados: "data", equipas: "teams", delegado: "delegate",
 const delegateTeams = MATCH_TEAMS;
 
 async function request(route, options = {}) {
+  const { silentError = false, ...fetchOptions } = options;
   const method = (options.method || "GET").toUpperCase();
   const freshRoute = method === "GET" ? `${route}${route.includes("?") ? "&" : "?"}_=${Date.now()}` : route;
   const response = await fetch(freshRoute, {
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
-    ...options,
+    ...fetchOptions,
   });
   if (!response.ok) {
     const text = await response.text();
     let message = text;
     try { message = JSON.parse(text).error || text; } catch {}
-    if (method !== "GET") alert(`Nao foi possivel guardar a alteracao: ${message}`);
+    if (method !== "GET" && !silentError) alert(`Nao foi possivel guardar a alteracao: ${message}`);
     throw new Error(message);
   }
   return response.json();
@@ -323,22 +324,22 @@ function canUseMatchControl(control) {
     return { ok: false, reason: "O jogo já terminou." };
   }
   if (control === "start-first") {
-    return hasSystemEvent("Início do jogo")
+    return hasSystemEvent("Início do jogo") || !["Pre-jogo", "Pré-jogo", "Por iniciar"].includes(period)
       ? { ok: false, reason: "O jogo já foi iniciado." }
       : { ok: true };
   }
   if (control === "half-time") {
-    return hasSystemEvent("Início do jogo") && period === "1ª Parte"
+    return period === "1ª Parte"
       ? { ok: true }
       : { ok: false, reason: "Só podes terminar a 1ª parte depois de clicar em Início do jogo." };
   }
   if (control === "start-second") {
-    return hasSystemEvent("Fim da 1ª parte") && period === "Intervalo"
+    return period === "Intervalo"
       ? { ok: true }
       : { ok: false, reason: "Só podes iniciar a 2ª parte depois de clicar em Fim da 1ª parte." };
   }
   if (control === "full-time") {
-    return hasSystemEvent("Início da 2ª parte") && period === "2ª Parte"
+    return period === "2ª Parte"
       ? { ok: true }
       : { ok: false, reason: "Só podes terminar o jogo depois de clicar em Início da 2ª parte." };
   }
@@ -348,7 +349,7 @@ function canUseMatchControl(control) {
 function canRegisterMatchEvent() {
   if (!state.selectedMatch) return { ok: false, reason: "Guarda primeiro a ficha/cria o jogo." };
   const live = selectedMatchLive();
-  if (!hasSystemEvent("Início do jogo")) {
+  if (!live || ["Pre-jogo", "Pré-jogo", "Por iniciar"].includes(live.period)) {
     return { ok: false, reason: "Só podes registar eventos depois de clicar em Início do jogo." };
   }
   if (hasSystemEvent("Fim de jogo") || live?.liveEnded) {
@@ -847,8 +848,9 @@ function renderTimeline() {
   const matchId = state.liveDetailMatchId || state.db.live?.matchId;
   const eventsNewest = state.db.events.filter((event) => event.matchId === matchId).slice(0, 50);
   const eventsChronological = [...eventsNewest].reverse();
+  const delegateEvents = selectedMatchEvents().slice(0, 50).reverse();
   if (timeline) timeline.innerHTML = eventsChronological.length ? "" : "<p>Sem eventos registados neste jogo.</p>";
-  if (eventLog) eventLog.innerHTML = eventsChronological.length ? "" : "<p>Sem eventos registados neste jogo.</p>";
+  if (eventLog) eventLog.innerHTML = delegateEvents.length ? "" : "<p>Sem eventos registados neste jogo.</p>";
 
   if (timeline) eventsChronological.forEach((event, index) => {
     const item = document.createElement("div");
@@ -858,7 +860,7 @@ function renderTimeline() {
   });
 
   if (eventLog) {
-    eventsChronological.forEach((event, index) => {
+    delegateEvents.forEach((event, index) => {
       const item = document.createElement("div");
       item.className = `timeline-item ${eventClass(event)}`;
       item.innerHTML = `<strong>#${index + 1}</strong>${eventMarkup(event)}${canDelegate() ? `<button class="delete-event" data-event-id="${event.id}">Apagar</button>` : ""}`;
@@ -1364,19 +1366,32 @@ async function saveDelegateAction(button, route, payload) {
   const label = button.textContent;
   button.textContent = "A guardar...";
   updateMatchControlButtons();
+  let failure;
   try {
-    const fresh = await request(route, { method: "POST", body: JSON.stringify(payload) });
+    const fresh = await request(route, { method: "POST", body: JSON.stringify(payload), silentError: true });
     state.db = fresh;
     if (state.selectedMatch) state.selectedMatch = matchById(state.selectedMatch.id) || state.selectedMatch;
     renderLive();
     renderTimeline();
     renderDataPage();
     renderDelegateMode();
+  } catch (error) {
+    failure = error;
+    // The server may have saved an action even if its response never arrived.
+    try {
+      state.db = await request("/api/bootstrap");
+      if (state.selectedMatch) state.selectedMatch = matchById(state.selectedMatch.id) || state.selectedMatch;
+      renderLive();
+      renderTimeline();
+      renderDataPage();
+      renderDelegateMode();
+    } catch {}
   } finally {
     state.savingEvent = false;
     button.textContent = label;
     updateMatchControlButtons();
   }
+  if (failure) alert(`Não foi possível confirmar a alteração: ${failure.message}. Confirma o estado do jogo antes de repetir.`);
 }
 
 async function setMatchControl(control) {
@@ -1904,6 +1919,14 @@ $("#saveManualMatch")?.addEventListener("click", async () => {
   });
   $("#syncStatus").textContent = "Jogo manual guardado e aplicado aos Resultados.";
 });
+
+const delegateMobileLayout = window.matchMedia("(max-width: 900px)");
+function positionDelegateActions() {
+  const parent = delegateMobileLayout.matches ? $("#delegateSetup .lineup-panel") : $("#delegateSetup > .compact");
+  parent.append($(".delegate-actions"));
+}
+positionDelegateActions();
+delegateMobileLayout.addEventListener("change", positionDelegateActions);
 
 await bootstrap();
 window.addEventListener("hashchange", () => setView(viewFromHash()));
