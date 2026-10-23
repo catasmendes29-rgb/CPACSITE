@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import XLSX from "xlsx";
 import { competitionOptions, matchFormat } from "../../public/matchFormats.js";
+import { lisbonToday } from "../../public/calendarView.js";
 
 const SHEETS = { Sub19: ["Sub19", 11], Sub17: ["Sub17", 11], Sub15: ["Sub15", 11], Sub13F9: ["Sub13", 9], Sub13F7: ["Sub13", 7] };
 const pad = value => String(value).padStart(2, "0");
@@ -74,6 +75,37 @@ export function mergeCalendar(db, calendar) {
   const deleted = new Set(db.deletedMatchIds || []);
   for (const incoming of calendar.matches) {
     if (deleted.has(incoming.id)) continue;
+    const sameFixture = match => match.level === incoming.level
+      && matchFormat(match.level, match, db.matchReports?.[match.id]) === incoming.format
+      && key(match.opponent) === key(incoming.opponent) && match.venue === incoming.venue
+      && match.season === incoming.season && match.competition === incoming.competition;
+    const manualCandidates = db.matches.filter(match => match.id !== incoming.id
+      && (match.source === "MANUAL" || match.id.startsWith("manual_")) && sameFixture(match)
+      && (match.date || (Number.isFinite(Date.parse(match.createdAt)) ? lisbonToday(new Date(match.createdAt)) : "")) === incoming.date);
+    const placeholder = db.matches.find(match => match.id === incoming.id);
+    const unused = !db.matchReports?.[incoming.id] && !(db.events || []).some(event => event.matchId === incoming.id)
+      && (!placeholder || (placeholder.status === "scheduled" && placeholder.goalsFor == null && placeholder.goalsAgainst == null))
+      && !(db.liveGames?.[incoming.id]?.homeScore || db.liveGames?.[incoming.id]?.awayScore);
+    const manual = manualCandidates.length === 1 ? manualCandidates[0] : null;
+    // Link only an unambiguous fixture; never discard a second game's sporting records.
+    const uniqueDay = manual && calendar.matches.filter(match => match.date === incoming.date && match.level === incoming.level
+      && match.format === incoming.format && key(match.opponent) === key(incoming.opponent)
+      && match.venue === incoming.venue && match.competition === incoming.competition).length === 1;
+    if (manual && unused && uniqueDay) {
+      if (manual.calendarId !== incoming.id || !manual.date || placeholder) {
+        manual.calendarId = incoming.id;
+        manual.date ||= incoming.date;
+        manual.time ||= incoming.time;
+        manual.stadium ||= incoming.stadium;
+        manual.homeTeam ||= incoming.homeTeam;
+        manual.awayTeam ||= incoming.awayTeam;
+        db.matches = db.matches.filter(match => match.id !== incoming.id);
+        if (db.liveGames) delete db.liveGames[incoming.id];
+        if (db.live?.matchId === incoming.id) db.live = db.liveGames?.[manual.id] || null;
+        changed = true;
+      }
+      continue;
+    }
     const existing = db.matches.find(match => match.id === incoming.id || (match.date === incoming.date
       && match.level === incoming.level && matchFormat(match.level, match, db.matchReports?.[match.id]) === incoming.format
       && key(match.opponent) === key(incoming.opponent) && match.venue === incoming.venue
