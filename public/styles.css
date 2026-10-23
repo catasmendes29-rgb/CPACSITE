@@ -174,7 +174,7 @@ main {
 .hero h1 {
   margin: 0;
   font-family: var(--condensed);
-  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-size: 6.5rem;
   line-height: 0.86;
   letter-spacing: 0;
   color: #fff;
@@ -1717,7 +1717,7 @@ th {
   }
 
   .hero h1 {
-    font-size: clamp(2.4rem, 16vw, 4rem);
+    font-size: 4rem;
   }
 
   .goose {
@@ -1813,9 +1813,21 @@ th {
     font-size: 0.7rem;
   }
 
-  .timeline-item {
-    grid-template-columns: 1fr;
+  .timeline-item,
+  .timeline-item.away-event {
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .timeline-item > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .timeline-item.away-event > * {
+    order: initial;
   }
 
 .scoreline strong {
@@ -2133,6 +2145,8 @@ body {
 .hero-copy {
   position: relative;
   z-index: 2;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .hero h1 {
@@ -2220,13 +2234,13 @@ body {
 
   .hero {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     min-height: 170px;
     padding: 24px 0 18px;
   }
 
   .hero h1 {
-    font-size: clamp(2.8rem, 18vw, 5rem);
+    font-size: 4rem;
   }
 
   .goose {
@@ -2302,7 +2316,7 @@ body {
   }
 
   .hero h1 {
-    font-size: clamp(2.7rem, 19vw, 4.2rem);
+    font-size: 2.5rem;
   }
 
   .eyebrow,
@@ -2524,7 +2538,7 @@ body {
 
   .hero {
     min-height: 150px;
-    padding-right: 58px;
+    padding-right: 0;
   }
 
   .event-head-actions {
@@ -2543,7 +2557,7 @@ body {
 
   .hero {
     min-height: 128px;
-    padding-right: 48px;
+    padding-right: 0;
   }
 
   #data table {
