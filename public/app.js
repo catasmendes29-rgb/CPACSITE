@@ -245,6 +245,7 @@ function setView(view) {
   $$(".view").forEach((section) => section.classList.toggle("active", section.id === view));
   if (view === "data") renderDataPage();
   if (view === "teams") renderTeamsPage();
+  if (["data", "teams"].includes(view)) refreshVisiblePublicData();
   if (view === "live") {
     renderLiveHub();
     if (state.liveDetailMatchId) openLiveDetail(state.liveDetailMatchId);
@@ -1930,18 +1931,26 @@ delegateMobileLayout.addEventListener("change", positionDelegateActions);
 
 await bootstrap();
 window.addEventListener("hashchange", () => setView(viewFromHash()));
+function refreshVisiblePublicData() {
+  if (document.visibilityState === "visible" && ["live", "data", "teams"].includes(state.currentView)) {
+    refreshLive().catch(error => console.warn("Nao foi possivel atualizar os dados:", error.message));
+  }
+}
 setInterval(() => {
   if (document.visibilityState === "visible" && state.currentView === "live") refreshLive();
 }, 5000);
+setInterval(() => {
+  if (["data", "teams"].includes(state.currentView)) refreshVisiblePublicData();
+}, 30000);
 
 window.addEventListener("focus", () => {
-  if (state.currentView === "live") refreshLive();
+  refreshVisiblePublicData();
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && state.currentView === "live") refreshLive();
+  refreshVisiblePublicData();
 });
 
 window.addEventListener("pageshow", () => {
-  if (state.currentView === "live") refreshLive();
+  refreshVisiblePublicData();
 });
