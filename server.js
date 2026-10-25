@@ -263,6 +263,19 @@ function ensureBaseShape(db) {
       }
     }
   }
+  const rosterAdditions = [
+    { id: "Sub15_Clara_Matos", level: "Sub15", name: "Clara Matos" },
+    { id: "Sub13_Carolina_Antunes", level: "Sub13", name: "Carolina Antunes" },
+    { id: "Sub17_Lara_Casquinho", level: "Sub17", name: "Lara Casquinho" },
+  ];
+  for (const addition of rosterAdditions) {
+    const exists = db.players.some(player => player.id === addition.id || (player.level === addition.level
+      && String(player.name || "").trim().localeCompare(addition.name, "pt", { sensitivity: "base" }) === 0));
+    if (!exists) {
+      db.players.push({ ...addition, number: "", position: "", birthYear: "", photoUrl: "", profileUrl: "", history: [] });
+      changed = true;
+    }
+  }
   for (const report of Object.values(db.matchReports)) {
     for (const field of ["starters", "lineupSlots", "bench"]) {
       if (report[field]?.includes("Rita Benfica")) {
