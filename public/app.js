@@ -4,6 +4,8 @@ const state = {
   matchFormat: 7,
   delegateCompetition: "",
   delegateOtherCompetition: "",
+  delegateGameMode: "calendar",
+  calendarSelection: "",
   teamsCompetition: "all",
   dataLevel: "Sub13:7",
   selectedMatch: null,
@@ -23,11 +25,12 @@ const state = {
   currentView: "data",
   refreshingLive: false,
   savingEvent: false,
+  savingReport: false,
   delegateRevision: 0,
 };
 
 import { playerMatchHistory } from "./playerHistory.js?v=20261016-sub13-views2";
-import { upcomingMatches, calendarDate } from "./calendarView.js?v=20261016-calendar1";
+import { upcomingMatches, calendarDate, lisbonToday, calendarChoices, calendarMatchesOnDate } from "./calendarView.js?v=20261028-choice2";
 import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js?v=20261016-sub13-views2";
 
 function readStoredUser() {
@@ -446,6 +449,36 @@ function renderSelectors() {
   if ($("#manualSeason") && !$("#manualSeason").value) $("#manualSeason").value = state.resultsSeason === "all" ? currentSeasonLabel() : state.resultsSeason;
 
   $("#manualOpponentWrap").hidden = false;
+  renderDelegateGameChoice();
+}
+
+function renderDelegateGameChoice() {
+  const saved = state.selectedMatch;
+  const calendar = saved ? Boolean(saved.calendarId || saved.source === "CALENDAR_EXCEL" || saved.id.startsWith("calendar_")) : state.delegateGameMode === "calendar";
+  $("#delegateGameMode").value = calendar ? "calendar" : "new";
+  $("#delegateGameMode").disabled = Boolean(saved);
+  $("#delegateCalendarWrap").hidden = !calendar;
+  const select = $("#delegateCalendarSelect");
+  select.replaceChildren(option("Selecionar jogo", ""));
+  const choices = calendarChoices(state.db, state.level);
+  if (saved && calendar && !choices.some(match => match.id === saved.id)) choices.unshift(saved);
+  for (const match of choices) select.append(option(`${match.date ? calendarDate(match.date) : "Sem data"} · ${match.opponent} (F${matchFormat(match.level, match)})`, match.id));
+  select.value = saved?.id || state.calendarSelection;
+  select.disabled = Boolean(saved) || !calendar;
+  const preview = saved || (calendar ? matchById(state.calendarSelection) : null);
+  if (preview) {
+    $("#delegateManualOpponent").value = preview.opponent || "";
+    $("#delegateVenue").value = preview.venue || "Casa";
+    $("#delegateDate").value = preview.date || "";
+    $("#delegateRound").value = preview.round || "";
+  } else if (!$("#delegateDate").value) $("#delegateDate").value = lisbonToday();
+  $("#delegateManualOpponent").readOnly = calendar || Boolean(saved);
+  $("#delegateDate").readOnly = calendar || Boolean(saved);
+  $("#delegateVenue").disabled = calendar || Boolean(saved);
+  if (calendar) {
+    $("#delegateCompetition").disabled = true;
+    $("#delegateFormat").disabled = true;
+  }
 }
 
 function renderDelegateCompetition() {
@@ -475,10 +508,10 @@ function delegateCompetitionName() {
 }
 
 function renderMatchCard() {
-  const match = state.selectedMatch;
+  const match = state.selectedMatch || (state.delegateGameMode === "calendar" ? matchById(state.calendarSelection) : null);
   $("#matchCard").innerHTML = match
-    ? `<strong>${match.level} vs ${match.opponent}</strong><br>${match.competition}<br>${match.venue || "Local por definir"} · Jornada ${match.round || "-"}`
-    : "Escreve a equipa adversária e cria a partida para continuar.";
+    ? `<strong>${escapeHtml(match.level)} vs ${escapeHtml(match.opponent)}</strong><br>${escapeHtml(match.competition)}<br>${match.date ? `${calendarDate(match.date)} · ` : ""}${escapeHtml(match.venue || "Local por definir")} · Jornada ${escapeHtml(match.round || "-")}`
+    : state.delegateGameMode === "calendar" ? "Nenhum jogo selecionado." : "Jogo novo";
 }
 
 function parseTactic() {
@@ -1253,6 +1286,7 @@ function hydrateReportFields() {
     $("#delegateManualOpponent").value = state.selectedMatch.opponent || "";
     $("#delegateVenue").value = state.selectedMatch.venue || "Casa";
     $("#delegateRound").value = state.selectedMatch.round || "";
+    $("#delegateDate").value = state.selectedMatch.date || "";
   }
   $("#delegateName").value = report.delegate || "";
   $("#tacticInput").value = report.tactic || "";
@@ -1545,12 +1579,48 @@ $("#levelSelect").addEventListener("change", async () => {
     return;
   }
   state.level = $("#levelSelect").value;
+  state.calendarSelection = "";
   state.matchFormat = availableFormats(state.level)[0];
   state.delegateCompetition = "";
   state.delegateOtherCompetition = "";
   state.selectedMatch = null;
   resetLineup();
   renderAll();
+});
+
+$("#delegateGameMode").addEventListener("change", () => {
+  if (state.selectedMatch) return;
+  state.delegateGameMode = $("#delegateGameMode").value;
+  state.calendarSelection = "";
+  if (state.delegateGameMode === "new") {
+    $("#delegateManualOpponent").value = "";
+    $("#delegateDate").value = lisbonToday();
+    $("#delegateRound").value = "";
+    $("#delegateVenue").value = "Casa";
+  }
+  renderSelectors();
+  renderMatchCard();
+});
+
+$("#delegateCalendarSelect").addEventListener("change", () => {
+  if (state.selectedMatch) return;
+  const match = matchById($("#delegateCalendarSelect").value);
+  if (!match) { state.calendarSelection = ""; return; }
+  const format = matchFormat(match.level, match);
+  if (format !== activeTeam().format) {
+    if ((state.starters.size || state.bench.size) && !confirm("Este jogo tem outro formato e limpa a escolha das jogadoras. Continuar?")) {
+      $("#delegateCalendarSelect").value = state.calendarSelection;
+      return;
+    }
+    state.matchFormat = format;
+    resetLineup();
+  }
+  state.calendarSelection = match.id;
+  state.delegateCompetition = competitionDefinition(match.level, match.competition) ? match.competition : "other";
+  state.delegateOtherCompetition = state.delegateCompetition === "other" ? match.competition : "";
+  renderSelectors();
+  renderMatchCard();
+  renderPlayers();
 });
 
 $("#dataLevelSelect").addEventListener("change", () => {
@@ -1643,8 +1713,29 @@ async function ensureDelegateMatch() {
     if (!selectedMatchLive() && !state.db.events.some(event => event.matchId === state.selectedMatch.id)) await activateSelectedMatch();
     return state.selectedMatch;
   }
+  if (state.delegateGameMode === "calendar") {
+    const matchId = state.calendarSelection;
+    if (!matchId) { alert("Seleciona um jogo do calendário."); $("#delegateCalendarSelect").focus(); return null; }
+    const fresh = await request("/api/bootstrap");
+    const match = calendarChoices(fresh, state.level).find(match => match.id === matchId);
+    if (!match) { alert("Este jogo já tem uma ficha ou foi alterado. Atualiza a página para confirmar o estado."); return null; }
+    if (!confirm(`Confirmas que a ficha corresponde a ${match.opponent}, em ${calendarDate(match.date)}, ${match.venue.toLowerCase()}?`)) return null;
+    state.db = fresh;
+    state.selectedMatch = match;
+    const round = $("#delegateRound").value.trim();
+    if (round && round !== match.round) {
+      const updated = await request("/api/manual-match", { method: "POST", body: JSON.stringify({ ...match, round }) });
+      state.db = updated;
+      state.selectedMatch = updated.manualMatch;
+    }
+    state.reportSetupVisible = true;
+    await activateSelectedMatch();
+    return state.selectedMatch;
+  }
   const opponent = $("#delegateManualOpponent").value.trim();
   const competition = delegateCompetitionName();
+  const date = $("#delegateDate").value;
+  if (!date) { alert("Indica a data do jogo."); $("#delegateDate").focus(); return null; }
   if (!competition) {
     alert("Escreve o nome da competição.");
     $("#delegateOtherCompetition").focus();
@@ -1652,6 +1743,15 @@ async function ensureDelegateMatch() {
   }
   if (!opponent) {
     alert("Escreve a equipa adversária.");
+    return null;
+  }
+  const freshCalendar = await request("/api/bootstrap");
+  const planned = calendarMatchesOnDate(freshCalendar, { level: state.level, format: activeTeam().format, date, competition, venue: $("#delegateVenue").value });
+  if (planned.length && !confirm(`Já existe um jogo do calendário nesse dia: ${planned.map(match => match.opponent).join(", ")}. Queres criar outro jogo separado?`)) {
+    state.db = freshCalendar;
+    state.delegateGameMode = "calendar";
+    state.calendarSelection = planned.length === 1 ? planned[0].id : "";
+    renderSelectors();
     return null;
   }
   const fresh = await request("/api/manual-match", {
@@ -1665,6 +1765,8 @@ async function ensureDelegateMatch() {
       opponent,
       venue: $("#delegateVenue").value,
       round: $("#delegateRound").value.trim(),
+      date,
+      calendarLinkDeclined: true,
       createdBy: state.user?.name || "",
     }),
   });
@@ -1683,32 +1785,44 @@ $("#eventType").addEventListener("change", updateEventFormMode);
 $("#eventTeam").addEventListener("change", updateEventFormMode);
 
 $("#saveReport").addEventListener("click", async () => {
+  if (state.savingReport) return;
   const team = activeTeam();
   if (state.starters.size !== team.format) {
     alert(`Este escalão precisa de ${team.format} titulares.`);
     return;
   }
-  const match = await ensureDelegateMatch();
-  if (!match) {
-    return;
+  state.savingReport = true;
+  state.delegateRevision += 1;
+  $("#saveReport").disabled = true;
+  $("#clearReport").disabled = true;
+  try {
+    const match = await ensureDelegateMatch();
+    if (!match) return;
+    await request("/api/report", {
+      method: "POST",
+      body: JSON.stringify({
+        matchId: state.selectedMatch.id,
+        delegate: $("#delegateName").value,
+        format: activeTeam().format,
+        tactic: $("#tacticInput").value,
+        notes: $("#notesInput").value,
+        starters: state.lineupSlots.filter(Boolean),
+        lineupSlots: state.lineupSlots,
+        bench: [...state.bench],
+      }),
+    });
+    await refreshLive();
+    renderSelectors();
+    hydrateReportFields();
+    renderMatchCard();
+    renderEventPlayers();
+    state.reportSetupVisible = false;
+    renderDelegateMode();
+  } finally {
+    state.savingReport = false;
+    $("#saveReport").disabled = false;
+    $("#clearReport").disabled = false;
   }
-  await request("/api/report", {
-    method: "POST",
-    body: JSON.stringify({
-      matchId: state.selectedMatch.id,
-      delegate: $("#delegateName").value,
-      format: activeTeam().format,
-      tactic: $("#tacticInput").value,
-      notes: $("#notesInput").value,
-      starters: state.lineupSlots.filter(Boolean),
-      lineupSlots: state.lineupSlots,
-      bench: [...state.bench],
-    }),
-  });
-  await refreshLive();
-  renderEventPlayers();
-  state.reportSetupVisible = false;
-  renderDelegateMode();
 });
 
 $("#clearReport").addEventListener("click", async () => {
@@ -1734,11 +1848,14 @@ $("#clearReport").addEventListener("click", async () => {
   state.reportSetupVisible = true;
   state.delegateCompetition = "";
   state.delegateOtherCompetition = "";
+  state.delegateGameMode = "calendar";
+  state.calendarSelection = "";
   state.playerSearch = "";
   $("#playerSearch").value = "";
   $("#delegateManualOpponent").value = "";
   $("#delegateVenue").value = "Casa";
   $("#delegateRound").value = "";
+  $("#delegateDate").value = lisbonToday();
   resetLineup();
   setPickerMode("starter");
   renderAll();
@@ -1932,7 +2049,7 @@ delegateMobileLayout.addEventListener("change", positionDelegateActions);
 await bootstrap();
 window.addEventListener("hashchange", () => setView(viewFromHash()));
 function refreshVisiblePublicData() {
-  if (document.visibilityState === "visible" && ["live", "data", "teams"].includes(state.currentView)) {
+  if (!state.savingReport && document.visibilityState === "visible" && ["live", "data", "teams"].includes(state.currentView)) {
     refreshLive().catch(error => console.warn("Nao foi possivel atualizar os dados:", error.message));
   }
 }
