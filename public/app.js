@@ -30,7 +30,7 @@ const state = {
 };
 
 import { playerMatchHistory } from "./playerHistory.js?v=20261016-sub13-views2";
-import { upcomingMatches, calendarDate, lisbonToday, calendarChoices, calendarMatchesOnDate } from "./calendarView.js?v=20261028-choice2";
+import { upcomingMatches, calendarDate, lisbonToday, calendarChoices, calendarMatchesOnDate } from "./calendarView.js?v=20261028-choice3";
 import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js?v=20261016-sub13-views2";
 
 function readStoredUser() {
@@ -460,24 +460,29 @@ function renderDelegateGameChoice() {
   $("#delegateCalendarWrap").hidden = !calendar;
   const select = $("#delegateCalendarSelect");
   select.replaceChildren(option("Selecionar jogo", ""));
-  const choices = calendarChoices(state.db, state.level);
+  const choices = calendarChoices(state.db, state.level, { format: activeTeam().format });
   if (saved && calendar && !choices.some(match => match.id === saved.id)) choices.unshift(saved);
   for (const match of choices) select.append(option(`${match.date ? calendarDate(match.date) : "Sem data"} · ${match.opponent} (F${matchFormat(match.level, match)})`, match.id));
   select.value = saved?.id || state.calendarSelection;
   select.disabled = Boolean(saved) || !calendar;
-  const preview = saved || (calendar ? matchById(state.calendarSelection) : null);
+  const preview = saved || (calendar ? choices.find(match => match.id === state.calendarSelection) : null);
   if (preview) {
     $("#delegateManualOpponent").value = preview.opponent || "";
     $("#delegateVenue").value = preview.venue || "Casa";
     $("#delegateDate").value = preview.date || "";
     $("#delegateRound").value = preview.round || "";
+  } else if (calendar) {
+    state.calendarSelection = "";
+    $("#delegateManualOpponent").value = "";
+    $("#delegateDate").value = lisbonToday();
+    $("#delegateRound").value = "";
+    $("#delegateVenue").value = "Casa";
   } else if (!$("#delegateDate").value) $("#delegateDate").value = lisbonToday();
   $("#delegateManualOpponent").readOnly = calendar || Boolean(saved);
   $("#delegateDate").readOnly = calendar || Boolean(saved);
   $("#delegateVenue").disabled = calendar || Boolean(saved);
   if (calendar) {
     $("#delegateCompetition").disabled = true;
-    $("#delegateFormat").disabled = true;
   }
 }
 
@@ -1694,12 +1699,14 @@ $("#delegateFormat").addEventListener("change", () => {
     return;
   }
   state.matchFormat = format;
-  if (state.delegateCompetition !== "other") {
+  state.calendarSelection = "";
+  if (state.delegateGameMode === "calendar" || state.delegateCompetition !== "other") {
     state.delegateCompetition = competitionOptions(state.level).find(item => item.format === format)?.name || "other";
   }
   resetLineup();
   $("#tacticInput").value = "";
   renderSelectors();
+  renderMatchCard();
   renderPlayers();
   renderEventPlayers();
 });
@@ -1717,7 +1724,7 @@ async function ensureDelegateMatch() {
     const matchId = state.calendarSelection;
     if (!matchId) { alert("Seleciona um jogo do calendário."); $("#delegateCalendarSelect").focus(); return null; }
     const fresh = await request("/api/bootstrap");
-    const match = calendarChoices(fresh, state.level).find(match => match.id === matchId);
+    const match = calendarChoices(fresh, state.level, { format: activeTeam().format }).find(match => match.id === matchId);
     if (!match) { alert("Este jogo já tem uma ficha ou foi alterado. Atualiza a página para confirmar o estado."); return null; }
     if (!confirm(`Confirmas que a ficha corresponde a ${match.opponent}, em ${calendarDate(match.date)}, ${match.venue.toLowerCase()}?`)) return null;
     state.db = fresh;
