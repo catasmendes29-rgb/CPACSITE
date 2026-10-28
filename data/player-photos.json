@@ -1,0 +1,385 @@
+{
+  "sourceWorkbook": "FemininoCasaPia_BD26_27.xlsx",
+  "players": [
+    {
+      "level": "Sub13",
+      "name": "Ellery Stolberg",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4545335&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Eva Conceição",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4704146&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Gabriela Vieira",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4787954&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Inês Sousa",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540097&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Lavynia Rocha",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4668642&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Leonor Cabêdo",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4578190&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Francisca Barbosa",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540098&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Leonor Queiroz",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540201&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Sara Fernandes",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540142&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub13",
+      "name": "Carminho Menezes",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4708312&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Bárbara Junqueira",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4544665&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Caetana Assunção",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4724362&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Irina Cabral",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4536395&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Larissa Ferreira",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4536408&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Margarida Oliveira",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4545552&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Maria Sequeira",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4545347&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Maria Almeida",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4684956&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Minetta Coates",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4545357&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Sara Garcia",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4817688&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Matilde Carvalho",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4547387&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Matilde Fialho",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4545551&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Maria Francisca Campos (Cuca)",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4708308&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Victoria Guerra",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4535409&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Diana Menezes",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4535425&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Leonor Loureiro",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4684944&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub15",
+      "name": "Carolina Roque",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4708306&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Aline Arrulo",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4619933&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Beatriz Silva",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4619966&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Inês Zacarias",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4619276&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Ivana Franco",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4541612&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Joana Caeiro",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4618609&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Madalena Neto",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540183&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Madalena Nova",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540798&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Maiara Tavares",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540264&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Margarida Fragata",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4541156&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Maria Amaro",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4673016&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Maria Silvestre",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540800&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Mariana Correia",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540163&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Matilde Soares",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4541620&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Melissa Freire",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4724348&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Milena Ermolina",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4881179&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Signe Salo",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4695290&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Teresa Luz",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4619287&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Wami Nunes",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4704731&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Clara Silva",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4642356&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Kyara",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4629714&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Isis Oliveira",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4619955&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Letícia",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4540191&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Margarida Cruz Garcia",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4704721&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Teresa Miranda",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4765130&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub17",
+      "name": "Maria Mateus",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4619942&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Beatriz Amoroso",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4662470&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Beatriz Correia",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4508271&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Bruna",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4508274&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Eliana Rodrigues",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4508272&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Francisca Cordeiro",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4493883&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Inês Cardoso",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4508273&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Inês Dias",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4667450&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Inês Saiegh",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4646112&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Joana Moutela",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4508155&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Joana Rodrigues",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4647906&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Joana Sousa",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4690202&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Lana Monteiro",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4640415&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Luciana Varela",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4607554&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Luísa Fernandes",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4520634&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Madalena Silva",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4692667&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Marcia Santinhos",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4687756&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Margarida Alves",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4505556&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Maria Coelho",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4508277&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Matilde Santos",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4494210&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Matilde Silva",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4512213&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Mia Aboubakr",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4513332&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Nicole Cunha",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4676778&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Nicole Mate",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4646772&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Sara Correia",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4647683&op=t&w=202&h=249"
+    },
+    {
+      "level": "Sub19",
+      "name": "Violeta Saraiva",
+      "photoUrl": "https://imagehandler.fpf.pt/ScoreImageHandler.ashx?type=Person&id=4661045&op=t&w=202&h=249"
+    }
+  ]
+}
