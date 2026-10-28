@@ -1,7 +1,8 @@
 import { matchFormat } from "./matchFormats.js?v=20261016-sub13-views2";
 
-export function calendarChoices(db, level, today = lisbonToday()) {
+export function calendarChoices(db, level, { today = lisbonToday(), format } = {}) {
   return db.matches.filter(match => match.level === level
+    && (format == null || matchFormat(level, match) === format)
     && /^\d{4}-\d{2}-\d{2}$/.test(match.date || "") && match.date >= today
     && (match.source === "CALENDAR_EXCEL" || match.calendarId || match.id.startsWith("calendar_"))
     && match.status !== "finished" && match.goalsFor == null && match.goalsAgainst == null
@@ -12,7 +13,7 @@ export function calendarChoices(db, level, today = lisbonToday()) {
 }
 
 export function calendarMatchesOnDate(db, { level, format, date, competition, venue }, today = lisbonToday()) {
-  return calendarChoices(db, level, today).filter(match => match.date === date && matchFormat(level, match) === format
+  return calendarChoices(db, level, { today, format }).filter(match => match.date === date
     && match.competition === competition && match.venue === venue);
 }
 
