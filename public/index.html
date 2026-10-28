@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Casa Pia AC Live</title>
-    <link rel="stylesheet" href="/styles.css?v=20261017-qa1" />
+    <link rel="stylesheet" href="/styles.css?v=20261028-calendar-choice2" />
   </head>
   <body>
     <header class="topbar">
@@ -60,6 +60,15 @@
               <label>Escalão
                 <select id="levelSelect"></select>
               </label>
+              <label>Tipo de jogo
+                <select id="delegateGameMode">
+                  <option value="calendar">Jogo calendarizado</option>
+                  <option value="new">Jogo novo</option>
+                </select>
+              </label>
+              <label id="delegateCalendarWrap">Jogo do calendário
+                <select id="delegateCalendarSelect"></select>
+              </label>
               <label>Competição
                 <select id="delegateCompetition"></select>
               </label>
@@ -77,6 +86,9 @@
               </label>
               <label>Jornada
                 <input id="delegateRound" placeholder="Número da jornada" />
+              </label>
+              <label>Data do jogo
+                <input id="delegateDate" type="date" />
               </label>
               <div class="match-card" id="matchCard"></div>
               <label>Delegado
@@ -368,6 +380,6 @@
       </section>
     </div>
 
-    <script type="module" src="/app.js?v=20261023-results-refresh1"></script>
+    <script type="module" src="/app.js?v=20261028-calendar-choice3"></script>
   </body>
 </html>
