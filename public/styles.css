@@ -338,7 +338,8 @@ label {
   margin: 0;
 }
 
-#delegateOtherCompetitionWrap[hidden] {
+#delegateOtherCompetitionWrap[hidden],
+#delegateCalendarWrap[hidden] {
   display: none !important;
 }
 
@@ -2454,6 +2455,12 @@ body {
 #delegate h3,
 #delegate .section-head p {
   color: #f5e5b0;
+}
+
+#delegate select:disabled {
+  opacity: 1;
+  color: #fff;
+  background: #111;
 }
 
 #delegate input,
