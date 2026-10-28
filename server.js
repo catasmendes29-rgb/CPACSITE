@@ -34,6 +34,25 @@ const driveStore = createDriveStore({ fileId: process.env.GOOGLE_DRIVE_FILE_ID, 
 let driveRestorePromise;
 let databaseQueue = Promise.resolve();
 let bundledCalendar;
+let bundledPlayerPhotos;
+async function mergeBundledPlayerPhotos(db) {
+  if (bundledPlayerPhotos === undefined) {
+    const file = path.join(__dirname, "data", "player-photos.json");
+    bundledPlayerPhotos = await exists(file) ? JSON.parse(await readFile(file, "utf8")) : null;
+  }
+  if (!bundledPlayerPhotos) return false;
+  const photos = new Map(bundledPlayerPhotos.players.map(player => [`${player.level}:${playerKey(player.name)}`, player.photoUrl]));
+  let changed = false;
+  for (const player of db.players) {
+    const sourceName = player.id === "Sub15_Rita_Benfica" && player.name === "Rita Moura" ? "Rita Benfica" : player.name;
+    const photoUrl = photos.get(`${player.level}:${playerKey(sourceName)}`);
+    if (photoUrl && photoUrl !== player.photoUrl) {
+      player.photoUrl = photoUrl;
+      changed = true;
+    }
+  }
+  return changed;
+}
 async function mergeBundledCalendar(db) {
   if (bundledCalendar === undefined) {
     const file = path.join(__dirname, "data", "calendar.json");
@@ -267,6 +286,8 @@ function ensureBaseShape(db) {
     { id: "Sub15_Clara_Matos", level: "Sub15", name: "Clara Matos" },
     { id: "Sub13_Carolina_Antunes", level: "Sub13", name: "Carolina Antunes" },
     { id: "Sub17_Lara_Casquinho", level: "Sub17", name: "Lara Casquinho" },
+    { id: "Sub17_Matilde_Salgueiro", level: "Sub17", name: "Matilde Salgueiro" },
+    { id: "Sub15_Alicia_Moutinho", level: "Sub15", name: "Alicia Moutinho" },
   ];
   for (const addition of rosterAdditions) {
     const exists = db.players.some(player => player.id === addition.id || (player.level === addition.level
@@ -492,7 +513,7 @@ function importPlayerDatabaseWorkbook(workbook, sheetRows, filename = "upload.xl
         number: sub13NameOnly ? "" : number,
         position: sub13NameOnly ? "" : position,
         birthYear: sub13NameOnly ? "" : birthYear,
-        photoUrl: !sub13NameOnly && isDirectPhotoUrl(photoUrl) ? photoUrl : "",
+        photoUrl: isDirectPhotoUrl(photoUrl) ? photoUrl : "",
         profileUrl: sub13NameOnly ? "" : link,
         history: [],
       });
@@ -763,10 +784,11 @@ async function loadDb() {
   const db = JSON.parse(text.replace(/^\uFEFF/, ""));
   const changedReset = driveStore.enabled ? false : await applyBundledSportsReset(db);
   const changedShape = ensureBaseShape(db);
+  const changedPhotos = await mergeBundledPlayerPhotos(db);
   const changedSeed = await mergeBundledSeasonSeed(db);
   const changedResults = syncFinishedLiveResults(db);
   const changedCalendar = await mergeBundledCalendar(db);
-  if (changedReset || changedShape || changedSeed || changedResults || changedCalendar) {
+  if (changedReset || changedShape || changedPhotos || changedSeed || changedResults || changedCalendar) {
     db.meta.migratedAt = new Date().toISOString();
     await saveDb(db);
   }
