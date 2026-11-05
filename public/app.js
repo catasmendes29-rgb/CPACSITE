@@ -30,6 +30,7 @@ const state = {
 };
 
 import { playerMatchHistory } from "./playerHistory.js?v=20261016-sub13-views2";
+import { createDelegateSession } from "./delegateSession.js?v=20261105-devices1";
 import { upcomingMatches, calendarDate, lisbonToday, calendarChoices, calendarMatchesOnDate } from "./calendarView.js?v=20261028-choice3";
 import { MATCH_TEAMS, TEAM_VIEWS, teamView, matchesTeamView, availableFormats, matchFormat, competitionOptions, competitionDefinition, competitionLabel } from "./matchFormats.js?v=20261016-sub13-views2";
 
@@ -47,13 +48,16 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const viewTitles = { data: "Resultados", teams: "Equipas", delegate: "Delegado", live: "Live" };
 const viewHashes = { resultados: "data", equipas: "teams", delegado: "delegate", live: "live" };
 const delegateTeams = MATCH_TEAMS;
+let delegateStorage;
+try { delegateStorage = window.localStorage; } catch {}
+const delegateSession = createDelegateSession(delegateStorage);
 
 async function request(route, options = {}) {
   const { silentError = false, ...fetchOptions } = options;
   const method = (options.method || "GET").toUpperCase();
   const freshRoute = method === "GET" ? `${route}${route.includes("?") ? "&" : "?"}_=${Date.now()}` : route;
   const response = await fetch(freshRoute, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(canDelegate() ? { "X-Delegate-Device": delegateSession.deviceId } : {}) },
     cache: "no-store",
     ...fetchOptions,
   });
@@ -62,7 +66,9 @@ async function request(route, options = {}) {
     let message = text;
     try { message = JSON.parse(text).error || text; } catch {}
     if (method !== "GET" && !silentError) alert(`Nao foi possivel guardar a alteracao: ${message}`);
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -302,6 +308,10 @@ function renderDelegateMode() {
   setup.hidden = hasReport && !state.reportSetupVisible;
   toggle.hidden = !hasReport;
   toggle.textContent = state.reportSetupVisible ? "Ocultar ficha de jogo" : "Ver ficha de jogo";
+  const match = state.selectedMatch;
+  $("#delegateMatchContext").textContent = match
+    ? `${match.level} · Futebol de ${matchFormat(match.level, match, selectedReport())} · Casa Pia vs ${match.opponent}${match.date ? ` · ${calendarDate(match.date)}` : ""}`
+    : "Sem ficha de jogo guardada.";
   updateMatchControlButtons();
 }
 
@@ -322,6 +332,7 @@ function selectedMatchLive() {
 
 function canUseMatchControl(control) {
   if (!state.selectedMatch) return { ok: false, reason: "Guarda primeiro a ficha/cria o jogo." };
+  if (!delegateSession.canEdit(state.db, state.selectedMatch.id)) return { ok: false, reason: "Esta ficha está aberta noutro dispositivo." };
   const live = selectedMatchLive();
   const period = live?.period || "Pre-jogo";
   if (live?.liveEnded || hasSystemEvent("Fim de jogo")) {
@@ -352,6 +363,7 @@ function canUseMatchControl(control) {
 
 function canRegisterMatchEvent() {
   if (!state.selectedMatch) return { ok: false, reason: "Guarda primeiro a ficha/cria o jogo." };
+  if (!delegateSession.canEdit(state.db, state.selectedMatch.id)) return { ok: false, reason: "Esta ficha está aberta noutro dispositivo." };
   const live = selectedMatchLive();
   if (!live || ["Pre-jogo", "Pré-jogo", "Por iniciar"].includes(live.period)) {
     return { ok: false, reason: "Só podes registar eventos depois de clicar em Início do jogo." };
@@ -664,8 +676,9 @@ function resetLineup() {
 
 function restoreReportState(matchId = state.selectedMatch?.id) {
   const match = matchById(matchId);
-  if (!match) return false;
+  if (!match || !delegateSession.canEdit(state.db, matchId)) return false;
   state.selectedMatch = match;
+  delegateSession.remember(matchId);
   state.level = match.level || state.level;
   const team = activeTeam();
   const report = state.db.matchReports?.[match.id] || {};
@@ -678,20 +691,30 @@ function restoreReportState(matchId = state.selectedMatch?.id) {
 }
 
 function restoreActiveDelegateMatch() {
-  const liveIds = [
-    state.db.live?.matchId,
-    ...Object.keys(state.db.liveGames || {}),
-  ].filter(Boolean);
-  const reportIds = Object.keys(state.db.matchReports || {});
-  const candidates = [...liveIds, ...reportIds];
-  const activeId = candidates.find((matchId) => {
-    const live = state.db.liveGames?.[matchId] || (state.db.live?.matchId === matchId ? state.db.live : null);
-    return state.db.matchReports?.[matchId] && matchById(matchId) && !live?.liveEnded && matchById(matchId).status !== "finished";
-  });
-  if (activeId) return restoreReportState(activeId);
+  if (!canDelegate()) { state.selectedMatch = null; resetLineup(); return false; }
+  const matchId = state.selectedMatch?.id || delegateSession.matchId();
+  const match = matchById(matchId);
+  const live = state.db.liveGames?.[matchId] || (state.db.live?.matchId === matchId ? state.db.live : null);
+  if (match && !live?.liveEnded && match.status !== "finished" && delegateSession.canEdit(state.db, matchId)
+    && (state.db.matchReports?.[matchId] || live)) return restoreReportState(matchId);
+  delegateSession.remember(null);
   resetLineup();
   state.selectedMatch = null;
   return false;
+}
+
+function releaseUnavailableDelegateSelection() {
+  if (!state.selectedMatch) return false;
+  const id = state.selectedMatch.id;
+  if (matchById(id) && delegateSession.canEdit(state.db, id)) return false;
+  delegateSession.remember(null);
+  state.selectedMatch = null;
+  state.delegateGameMode = "calendar";
+  state.calendarSelection = "";
+  state.reportSetupVisible = true;
+  resetLineup();
+  renderAll();
+  return true;
 }
 
 function setPickerMode(mode) {
@@ -1333,6 +1356,7 @@ async function activateSelectedMatch() {
   state.db.events = fresh.events;
   state.db.matches = fresh.matches;
   state.db.matchReports = fresh.matchReports;
+  delegateSession.remember(state.selectedMatch.id);
 }
 
 async function bootstrap() {
@@ -1361,6 +1385,8 @@ async function refreshLive() {
     state.db.matchReports = fresh.matchReports;
     if (state.selectedMatch) state.selectedMatch = matchById(state.selectedMatch.id) || state.selectedMatch;
 
+    releaseUnavailableDelegateSelection();
+
     if (state.currentView === "live") {
       const detailStillAvailable = state.liveDetailMatchId && liveGames().some(({ match }) => match.id === state.liveDetailMatchId);
       if (state.liveDetailMatchId && !detailStillAvailable) {
@@ -1383,6 +1409,8 @@ async function refreshLive() {
       updateMatchControlButtons();
     }
     renderAuth();
+  } catch (error) {
+    console.warn("Nao foi possivel atualizar a ligacao:", error.message);
   } finally {
     state.refreshingLive = false;
   }
@@ -1421,6 +1449,7 @@ async function saveDelegateAction(button, route, payload) {
     try {
       state.db = await request("/api/bootstrap");
       if (state.selectedMatch) state.selectedMatch = matchById(state.selectedMatch.id) || state.selectedMatch;
+      releaseUnavailableDelegateSelection();
       renderLive();
       renderTimeline();
       renderDataPage();
@@ -1465,6 +1494,8 @@ $("#loginSubmit").addEventListener("click", () => {
   state.user = user;
   localStorage.setItem("cpacUser", JSON.stringify(user));
   $("#loginError").textContent = "";
+  restoreActiveDelegateMatch();
+  renderAll();
   renderAuth();
   refreshLive();
   setView("delegate");
@@ -1503,7 +1534,7 @@ document.addEventListener("click", async (event) => {
       return;
     }
     hideMatchAdmin();
-    restoreReportState(match.id);
+    if (!restoreReportState(match.id)) { alert("Esta ficha está aberta noutro dispositivo. Escolhe outro jogo."); return; }
     state.reportSetupVisible = true;
     renderAll();
     setView("delegate");
@@ -1805,7 +1836,7 @@ $("#saveReport").addEventListener("click", async () => {
   try {
     const match = await ensureDelegateMatch();
     if (!match) return;
-    await request("/api/report", {
+    const saved = await request("/api/report", {
       method: "POST",
       body: JSON.stringify({
         matchId: state.selectedMatch.id,
@@ -1818,6 +1849,7 @@ $("#saveReport").addEventListener("click", async () => {
         bench: [...state.bench],
       }),
     });
+    if (saved.report) state.db.matchReports[state.selectedMatch.id] = saved.report;
     await refreshLive();
     renderSelectors();
     hydrateReportFields();
@@ -1825,6 +1857,11 @@ $("#saveReport").addEventListener("click", async () => {
     renderEventPlayers();
     state.reportSetupVisible = false;
     renderDelegateMode();
+  } catch (error) {
+    if (error.status === 409) {
+      state.db = await request("/api/bootstrap");
+      releaseUnavailableDelegateSelection();
+    } else throw error;
   } finally {
     state.savingReport = false;
     $("#saveReport").disabled = false;
@@ -1853,6 +1890,7 @@ $("#clearReport").addEventListener("click", async () => {
   }
   state.selectedMatch = null;
   state.reportSetupVisible = true;
+  delegateSession.remember(null);
   state.delegateCompetition = "";
   state.delegateOtherCompetition = "";
   state.delegateGameMode = "calendar";
